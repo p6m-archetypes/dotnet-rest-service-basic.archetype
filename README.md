@@ -1,5 +1,7 @@
 # .NET REST Service Archetype
 
+![Latest Release](https://img.shields.io/github/v/release/p6m-archetypes/dotnet-rest-service-basic.archetype?style=flat-square&label=Latest%20Release&color=blue)
+
 ## Usage
 
 To get started, [install archetect](https://github.com/p6m-archetypes/development-handbook)
