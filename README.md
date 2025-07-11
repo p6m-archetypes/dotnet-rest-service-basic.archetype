@@ -1,4 +1,4 @@
-# .NET gRPC Service Archetype
+# .NET REST Service Archetype
 
 ## Usage
 
@@ -6,7 +6,7 @@ To get started, [install archetect](https://github.com/p6m-archetypes/developmen
 and render this template to your current working directory:
 
 ```bash
-archetect render git@github.com:p6m-archetypes/dotnet-grpc-service.archetype.git
+archetect render git@github.com:p6m-archetypes/dotnet-rest-service-basic.archetype.git
 ```
 
 For information about interacting with the service, refer to the README at the generated
@@ -30,10 +30,10 @@ For a list of all derived properties and examples of the property relationships,
 ## What's Inside
 
 Features include:
+
 - Entity Framework Core [EF](https://learn.microsoft.com/en-us/ef/core/)
 - Testcontainers .NET (https://dotnet.testcontainers.org/)
-- Simple CRUD over [gRPC](https://grpc.io/)
-- gRPC stub publication based on the project name
+- Simple CRUD over REST
 - Docker image publication to artifactory
 - Load tests using [k6](https://k6.io/) for both HTTP and gRPC calls
 - Application configuration through property files, environment variables, and CLI arguments.
