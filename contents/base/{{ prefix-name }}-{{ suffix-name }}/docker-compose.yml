@@ -1,0 +1,1 @@
+'{version: 3.8, services: {postgres: {restart: unless-stopped, volumes: [postgres_volume:/var/lib/postgresql/data], image: postgres:15-alpine, ports: [5432:5432], environment: {POSTGRES_DB: {{ prefix_name }}_{{ suffix_name }}_db, POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres}}}, volumes: {postgres_volume: }}'

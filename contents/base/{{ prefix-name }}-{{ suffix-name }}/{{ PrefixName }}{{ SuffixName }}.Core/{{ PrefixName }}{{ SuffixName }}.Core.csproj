@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+    <PackageId>{{ PrefixName }}{{ SuffixName }}.Core</PackageId>
+    <Description>{{ PrefixName }} {{ SuffixName }} :: Core</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\{{ PrefixName }}{{ SuffixName }}.API\{{ PrefixName }}{{ SuffixName }}.API.csproj" />
+    <ProjectReference Include="..\{{ PrefixName }}{{ SuffixName }}.Persistence\{{ PrefixName }}{{ SuffixName }}.Persistence.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
+  </ItemGroup>
+
+</Project>
