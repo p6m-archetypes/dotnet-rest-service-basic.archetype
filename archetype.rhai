@@ -60,18 +60,29 @@ render(Directory("contents/base"), context);
 // render(Archetype("manifests"), context["artifact-id"], context);
 
 
-display();
+if switch_enabled("git-init") || switch_enabled("git-publish") {
+  git_init(context["project-name"], "main");
+  git_add_all(context["project-name"]);
+  git_commit(context["project-name"], "initial commit");
+  git_remote_add(context["project-name"], "origin", render("https://github.com/{{ org-solution-name }}/{{ project-name }}.git", context));
 
-log(Info, "Copy and paste the following commands to publish your Project:");
+  if switch_enabled("git-publish") {
+    gh_repo_create(render("{{ org-solution-name }}/{{ project-name }}", context), Private);
+    git_push(context["project-name"], "origin", "main");
+  }
+} else {
+  display();
 
-display();
+  log(Info, "Copy and paste the following commands to publish your project:");
 
-display(render("cd {{ prefix-name }}-{{ suffix-name }}", context));
-display("git init -b main");
-display(render("gh repo create {{ org-name }}-{{ solution-name }}/{{ prefix-name }}-{{ suffix-name }} --public --source=. --remote=origin", context));
-display("git add .");
-display("git commit -m 'initial commit'");
-display("git push -u origin HEAD");
+  display();
 
-// Return Context
+  display(render("cd {{ project-name }}", context));
+  display("git init -b main");
+  display(render("gh repo create {{ org-solution-name }}/{{ project-name }} --private --source=. --remote=origin", context));
+  display("git add .");
+  display("git commit -m 'initial commit'");
+  display("git push -u origin HEAD");
+}
+
 context
