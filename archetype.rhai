@@ -16,16 +16,17 @@ context += render(Archetype("project-prompts"), ANSWERS + #{
         "Service",
         "Orchestrator",
         "Adapter",
+        "Domain Gateway"
     ],
 }, render_settings);
 
-// context += prompt("Persistence:", "persistence", #{
-//   type: Select([
-//     "CockroachDB",
-//     "None",
-//   ]),
-//   defaults_with: "CockroachDB",
-// });
+context += prompt("Persistence:", "persistence", #{
+    type: Select([
+        "CockroachDB",
+        "None",
+    ]),
+    defaults_with: "CockroachDB",
+});
 
 context += prompt("Artifactory Host:", "artifactory-host", #{
   defaults_with: "p6m.jfrog.io",
@@ -43,22 +44,20 @@ if switch_enabled("debug-context") {
 
 render(Directory("contents/base"), context);
 
-// if context["persistence"] == "CockroachDB" {
-//   render(Directory("contents/persistence"), context);
-//   for entity_key in context.model.entities.keys() {
-//     let entity = context.model.entities[entity_key];
-//     let entity_context = #{};
-//     entity_context += set("entity-name", entity_key, #{
-//         cases: [
-//             CasedIdentityCasedValue(PROGRAMMING_CASES),
-//         ],
-//     });
-//     render(Directory("contents/persistence_entity"), context + entity_context);
-//   }
-// }
+render(Archetype("manifests"), context["project-name"], context + #{
+  "language": ".NET",
+  "protocol": "REST",
+});
 
-// render(Archetype("manifests"), context["artifact-id"], context);
-
+//
+// Publishing
+//
+if switch_enabled("zip") {
+  zip(context["project-name"], render("{{ project-name }}.zip", context));
+}
+if switch_enabled("tarball") {
+  tar_gz(context["project-name"], render("{{ project-name }}.tar.gz", context));
+}
 
 if switch_enabled("git-init") || switch_enabled("git-publish") {
   git_init(context["project-name"], "main");
@@ -72,9 +71,7 @@ if switch_enabled("git-init") || switch_enabled("git-publish") {
   }
 } else {
   display();
-
   log(Info, "Copy and paste the following commands to publish your project:");
-
   display();
 
   display(render("cd {{ project-name }}", context));

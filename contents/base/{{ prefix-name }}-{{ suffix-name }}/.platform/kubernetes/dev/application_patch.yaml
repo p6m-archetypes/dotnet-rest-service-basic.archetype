@@ -1,6 +1,0 @@
-apiVersion: meta.p6m.dev/v1alpha1
-kind: PlatformApplication
-metadata:
-  name: dotnet-grpc-service
-spec:
-  config: {}

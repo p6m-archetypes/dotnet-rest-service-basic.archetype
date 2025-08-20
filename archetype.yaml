@@ -11,5 +11,5 @@ requires:
 components:
   org-prompts: https://github.com/p6m-archetypes/org-prompts.archetype.git#v1
   project-prompts: https://github.com/archetect-common/project-prompts.archetype.git#v1
-  manifests: https://github.com/p6m-archetypes/platform-application-manifests.archetype.git#v1
+  manifests: https://github.com/p6m-archetypes/platform-application-manifests-2.archetype.git#v1
   gitignore: https://github.com/archetect-common/dot-gitignore.archetype.git#v1

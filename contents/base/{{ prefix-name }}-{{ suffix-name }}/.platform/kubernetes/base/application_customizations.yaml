@@ -1,3 +1,0 @@
-images:
-  - path: spec/deployment/image
-    kind: PlatformApplication
