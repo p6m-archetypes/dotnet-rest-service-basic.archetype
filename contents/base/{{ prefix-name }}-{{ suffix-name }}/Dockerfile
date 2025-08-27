@@ -44,16 +44,16 @@ COPY --from=build --chown=appuser:appgroup /app/publish .
 USER appuser
 
 # Expose ports
-EXPOSE 5030
-EXPOSE 5031
+EXPOSE 8080
+EXPOSE 8081
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:5031/health/live || exit 1
+    CMD curl -f http://localhost:8081/health/live || exit 1
 
 # Environment variables for runtime configuration
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV ASPNETCORE_URLS=http://+:5030;http://+:5031
+ENV ASPNETCORE_URLS=http://+:8080;http://+:8081
 ENV DOTNET_EnableDiagnostics=0
 
 # Set the entry point

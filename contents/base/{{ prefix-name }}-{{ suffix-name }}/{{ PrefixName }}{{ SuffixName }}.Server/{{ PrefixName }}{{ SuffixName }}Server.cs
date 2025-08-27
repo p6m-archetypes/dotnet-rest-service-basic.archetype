@@ -24,7 +24,7 @@ public class {{ PrefixName }}{{ SuffixName }}Server
         else
         {
             // Default for tests when no specific port is set
-            builder.WebHost.UseUrls("http://0.0.0.0:5031");
+            builder.WebHost.UseUrls("http://0.0.0.0:8081");
         }
         
         // Configure graceful shutdown
@@ -98,7 +98,7 @@ public class {{ PrefixName }}{{ SuffixName }}Server
      public {{ PrefixName }}{{ SuffixName }}Server WithRandomPorts()
     {
         // Use fixed test port for integration tests to avoid port discovery issues
-        Environment.SetEnvironmentVariable("HTTP_PORT", "5031");
+        Environment.SetEnvironmentVariable("HTTP_PORT", "8081");
         return this;
     }
 
@@ -112,13 +112,13 @@ public class {{ PrefixName }}{{ SuffixName }}Server
             var serverAddresses = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>();
             if (serverAddresses?.Addresses == null || !serverAddresses.Addresses.Any())
             {
-                return "http://localhost:5031";
+                return "http://localhost:8081";
             }
             
             var addresses = serverAddresses.Addresses.ToList();
             
-            // Look for the HTTP endpoint - it should contain port 5031 or 15031 (test port)
-            var httpAddress = addresses.FirstOrDefault(addr => addr.Contains("5031") || addr.Contains("15031"));
+            // Look for the HTTP endpoint - it should contain port 8081 or 18081 (test port)
+            var httpAddress = addresses.FirstOrDefault(addr => addr.Contains("8081") || addr.Contains("18081"));
             
             // If not found by port, use the first address
             if (httpAddress == null && addresses.Count > 0)
@@ -139,11 +139,11 @@ public class {{ PrefixName }}{{ SuffixName }}Server
                 return $"http://localhost:{testPort}";
             }
             
-            return "http://localhost:5031";
+            return "http://localhost:8081";
         }
         catch
         {
-            return "http://localhost:5031";
+            return "http://localhost:8081";
         }
     }
     

@@ -32,8 +32,13 @@ context += prompt("Artifactory Host:", "artifactory-host", #{
   defaults_with: "p6m.jfrog.io",
 });
 
-context += set("service-port", 5030);
-context += set("management-port", context["service-port"] + 1);
+context += prompt("Service Port:", "service-port", #{
+  defaults_with: "8080",
+});
+
+context += prompt("Management Port:", "management-port", #{
+  defaults_with: "8081",
+});
 context += set("database-port", 26257);
 context += set("debug-port", context["service-port"] + 9);
 

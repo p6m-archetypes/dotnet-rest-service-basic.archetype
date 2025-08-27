@@ -105,8 +105,8 @@ dotnet run -- --ephemeral
 
 This server accepts connections on the following ports:
 
-- 5030: used for application gRPC Service traffic.
-- 5031: used to monitor the application over HTTP.
+- 8080: used for application REST Service traffic.
+- 8081: used to monitor the application over HTTP.
 - 26257: exposes the persistent database port (when using docker-compose)
 
 ### Using your service's APIs
@@ -116,14 +116,14 @@ Create, Read, Update and Delete an entity using a gRPC client, like [grpcurl](ht
 Create{{ PrefixName }}
 
 ```bash
-grpcurl -plaintext -d '{"name": "test"}' localhost:5030 \
+grpcurl -plaintext -d '{"name": "test"}' localhost:8080 \
     {{ org_name }}.{{ solution_name }}.{{ prefix_name }}.{{ suffix_name }}.grpc.{{ PrefixName }}{{ SuffixName }}/Create{{ PrefixName }}
 ```
 
 Get{{ PrefixName }}s
 
 ```bash
-grpcurl -plaintext -d '{"start_page": "1", "page_size": "5"}' localhost:5030 \
+grpcurl -plaintext -d '{"start_page": "1", "page_size": "5"}' localhost:8080 \
     {{ org_name }}.{{ solution_name }}.{{ prefix_name }}.{{ suffix_name }}.grpc.{{ PrefixName }}{{ SuffixName }}/Get{{ PrefixName }}s
 ```
 
@@ -269,20 +269,20 @@ docker-compose down
 
 ### Health Checks
 
-Verify things are up and running by looking at the [/health](http://localhost:5031/health) endpoint:
+Verify things are up and running by looking at the [/health](http://localhost:8081/health) endpoint:
 
 ```bash
-curl localhost:5031/health
+curl localhost:8081/health
 ```
 
 ## Metrics
 
 Prometheus - [Prometheus](https://github.com/prometheus-net/prometheus-net)
 
-[/metrics](http://localhost:5031/metrics) endpoint:
+[/metrics](http://localhost:8081/metrics) endpoint:
 
 ```bash
-curl localhost:5031/metrics
+curl localhost:8081/metrics
 ```
 
 ## DB migrations

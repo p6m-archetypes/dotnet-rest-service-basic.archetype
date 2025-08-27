@@ -269,7 +269,7 @@ public class Startup
         bool dropCreateDatabase = bool.Parse(Configuration["Database:DropCreateDatabase"] ?? "false");
         
         // Handle database setup based on environment
-        if (enableMigrations)
+        if (enableMigrations && isEphemeral)
         {
             using (var scope = app.Services.CreateScope())
             {

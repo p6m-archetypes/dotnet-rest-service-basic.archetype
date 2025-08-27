@@ -41,7 +41,7 @@ dotnet run --project {{ PrefixName }}{{ SuffixName }}.Server -- --ephemeral
 # The service will:
 # - Automatically start a PostgreSQL 15 container on a random port
 # - Apply database migrations
-# - Start the REST API service on port 5031 (HTTP)
+# - Start the REST API service on port 8081 (HTTP)
 # - Clean up the container when stopped
 ```
 
@@ -49,8 +49,8 @@ dotnet run --project {{ PrefixName }}{{ SuffixName }}.Server -- --ephemeral
 If you get a "address already in use" error, check for existing server instances:
 ```bash
 # Check what's using the ports
-lsof -i :5030
-lsof -i :5031
+lsof -i :8080
+lsof -i :8081
 
 # Stop existing server process (replace PID with actual process ID)
 kill <PID>
@@ -110,7 +110,7 @@ DATABASE_MIGRATIONS_ENABLED=false dotnet run --project {{ PrefixName }}{{ Suffix
 #### Authentication
 ```bash
 # Get authentication token
-curl -X POST http://localhost:5031/api/auth/token \
+curl -X POST http://localhost:8081/api/auth/token \
   -H "Content-Type: application/json" \
   -d '{"clientId": "admin-client", "clientSecret": "admin-secret"}'
 
@@ -121,46 +121,46 @@ TOKEN="your-jwt-token-here"
 #### REST Endpoints (with authentication)
 ```bash
 # Test Create{{ PrefixName }} endpoint (requires admin or write role)
-curl -X POST http://localhost:5031/api/{{ PrefixName }}{{ SuffixName }} \
+curl -X POST http://localhost:8081/api/{{ PrefixName }}{{ SuffixName }} \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name": "test"}'
 
 # Test Get{{ PrefixName }} endpoint (requires any role)
-curl -X GET http://localhost:5031/api/{{ PrefixName }}{{ SuffixName }}/123 \
+curl -X GET http://localhost:8081/api/{{ PrefixName }}{{ SuffixName }}/123 \
   -H "Authorization: Bearer $TOKEN"
 
 # Test Get{{ PrefixName }}s endpoint (requires any role)
-curl -X GET "http://localhost:5031/api/{{ PrefixName }}{{ SuffixName }}?startPage=1&pageSize=5" \
+curl -X GET "http://localhost:8081/api/{{ PrefixName }}{{ SuffixName }}?startPage=1&pageSize=5" \
   -H "Authorization: Bearer $TOKEN"
 
 # Test Update{{ PrefixName }} endpoint (requires admin or write role)
-curl -X PUT http://localhost:5031/api/{{ PrefixName }}{{ SuffixName }}/123 \
+curl -X PUT http://localhost:8081/api/{{ PrefixName }}{{ SuffixName }}/123 \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"id": "123", "name": "updated test"}'
 
 # Test Delete{{ PrefixName }} endpoint (requires admin role)
-curl -X DELETE http://localhost:5031/api/{{ PrefixName }}{{ SuffixName }}/123 \
+curl -X DELETE http://localhost:8081/api/{{ PrefixName }}{{ SuffixName }}/123 \
   -H "Authorization: Bearer $TOKEN"
 
 # Access Swagger UI (in development/ephemeral mode)
-# Open browser to: http://localhost:5031/swagger
+# Open browser to: http://localhost:8081/swagger
 ```
 
 #### Health and Monitoring
 ```bash
 # Comprehensive health check (includes database and service dependencies)
-curl localhost:5031/health
+curl localhost:8081/health
 
 # Kubernetes liveness probe (basic application health)
-curl localhost:5031/health/live
+curl localhost:8081/health/live
 
 # Kubernetes readiness probe (dependencies health)
-curl localhost:5031/health/ready
+curl localhost:8081/health/ready
 
 # Prometheus metrics endpoint (custom business metrics + OpenTelemetry)
-curl localhost:5031/metrics
+curl localhost:8081/metrics
 
 # Custom metrics available:
 # - {{ prefix_name }}_requests_total (gRPC request count)
@@ -181,10 +181,10 @@ curl localhost:5031/metrics
 docker build -t {{ prefix-name }}-{{ suffix-name }} .
 
 # Run container (ephemeral mode)
-docker run -p 5030:5030 -p 5031:5031 -e SPRING_PROFILES_ACTIVE=ephemeral {{ prefix-name }}-{{ suffix-name }}
+docker run -p 8080:8080 -p 8081:8081 -e SPRING_PROFILES_ACTIVE=ephemeral {{ prefix-name }}-{{ suffix-name }}
 
 # Run container with custom configuration
-docker run -p 5030:5030 -p 5031:5031 \
+docker run -p 8080:8080 -p 8081:8081 \
   -e DATABASE_URL="Host=host.docker.internal;Port=26257;Database=mydb;Username=root;Password=" \
   -e LOG_LEVEL=Debug \
   {{ prefix-name }}-{{ suffix-name }}
@@ -215,9 +215,9 @@ This is a .NET 8.0 REST API service following clean architecture with 7 main pro
 - Swagger/OpenAPI for API documentation
 
 ### Service Endpoints
-- REST API service: port 5031 (HTTP/1.1)
-- Health/metrics: port 5031 (HTTP/1.1)
-- Swagger UI: http://localhost:5031/swagger (dev/ephemeral only)
+- REST API service: port 8081 (HTTP/1.1)
+- Health/metrics: port 8081 (HTTP/1.1)
+- Swagger UI: http://localhost:8081/swagger (dev/ephemeral only)
 - Local database: port 5432
 
 ### Health Check Endpoints
