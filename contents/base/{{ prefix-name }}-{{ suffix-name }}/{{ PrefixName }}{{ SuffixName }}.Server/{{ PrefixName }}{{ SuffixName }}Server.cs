@@ -15,17 +15,9 @@ public class {{ PrefixName }}{{ SuffixName }}Server
     {
         var builder = WebApplication.CreateBuilder(args);
         
-        // Configure HTTP port from environment variable if set
-        var httpPort = Environment.GetEnvironmentVariable("HTTP_PORT");
-        if (!string.IsNullOrEmpty(httpPort))
-        {
-            builder.WebHost.UseUrls($"http://0.0.0.0:{httpPort}");
-        }
-        else
-        {
-            // Default for tests when no specific port is set
-            builder.WebHost.UseUrls("http://0.0.0.0:8081");
-        }
+        // Allow ASPNETCORE_URLS environment variable to control binding
+        // This supports both service-port and management-port from docker-compose.yml
+        // Example: ASPNETCORE_URLS=http://+:8080;http://+:8081
         
         // Configure graceful shutdown
         builder.Host.ConfigureHostOptions(options =>
@@ -98,7 +90,7 @@ public class {{ PrefixName }}{{ SuffixName }}Server
      public {{ PrefixName }}{{ SuffixName }}Server WithRandomPorts()
     {
         // Use fixed test port for integration tests to avoid port discovery issues
-        Environment.SetEnvironmentVariable("HTTP_PORT", "8081");
+        Environment.SetEnvironmentVariable("HTTP_PORT", "{{ management-port }}");
         return this;
     }
 
@@ -112,13 +104,13 @@ public class {{ PrefixName }}{{ SuffixName }}Server
             var serverAddresses = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>();
             if (serverAddresses?.Addresses == null || !serverAddresses.Addresses.Any())
             {
-                return "http://localhost:8081";
+                return "http://localhost:{{ management-port }}";
             }
             
             var addresses = serverAddresses.Addresses.ToList();
             
-            // Look for the HTTP endpoint - it should contain port 8081 or 18081 (test port)
-            var httpAddress = addresses.FirstOrDefault(addr => addr.Contains("8081") || addr.Contains("18081"));
+            // Look for the HTTP endpoint - it should contain port {{ management-port }} or 1{{ management-port }} (test port)
+            var httpAddress = addresses.FirstOrDefault(addr => addr.Contains("{{ management-port }}") || addr.Contains("1{{ management-port }}"));
             
             // If not found by port, use the first address
             if (httpAddress == null && addresses.Count > 0)
@@ -139,11 +131,11 @@ public class {{ PrefixName }}{{ SuffixName }}Server
                 return $"http://localhost:{testPort}";
             }
             
-            return "http://localhost:8081";
+            return "http://localhost:{{ management-port }}";
         }
         catch
         {
-            return "http://localhost:8081";
+            return "http://localhost:{{ management-port }}";
         }
     }
     

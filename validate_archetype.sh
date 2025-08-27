@@ -327,19 +327,19 @@ validate_port_configuration() {
     
     local port_validation_failed=0
     
-    # Check Dockerfile ports
+    # Check Dockerfile ports (should be rendered to actual values)
     if [ -f "Dockerfile" ]; then
-        if grep -q "EXPOSE 8080" Dockerfile && grep -q "EXPOSE 8081" Dockerfile; then
-            test_result 0 "Dockerfile correctly exposes ports 8080 and 8081"
+        if grep -q "EXPOSE $TEST_SERVICE_PORT" Dockerfile && grep -q "EXPOSE $TEST_MANAGEMENT_PORT" Dockerfile; then
+            test_result 0 "Dockerfile correctly exposes service port ($TEST_SERVICE_PORT) and management port ($TEST_MANAGEMENT_PORT)"
         else
-            test_result 1 "Dockerfile does not expose correct ports (should be 8080 and 8081)"
+            test_result 1 "Dockerfile does not expose correct ports (should be $TEST_SERVICE_PORT and $TEST_MANAGEMENT_PORT)"
             port_validation_failed=1
         fi
         
-        if grep -q "localhost:8081/health/live" Dockerfile; then
-            test_result 0 "Dockerfile health check uses correct port (8081)"
+        if grep -q "localhost:$TEST_MANAGEMENT_PORT/health/live" Dockerfile; then
+            test_result 0 "Dockerfile health check uses correct management port ($TEST_MANAGEMENT_PORT)"
         else
-            test_result 1 "Dockerfile health check does not use port 8081"
+            test_result 1 "Dockerfile health check does not use management port $TEST_MANAGEMENT_PORT"
             port_validation_failed=1
         fi
     else
@@ -351,12 +351,13 @@ validate_port_configuration() {
     local PREFIX_CAPITALIZED="$(echo ${TEST_PREFIX:0:1} | tr '[:lower:]' '[:upper:]')$(echo ${TEST_PREFIX:1} | tr '[:upper:]' '[:lower:]')"
     local SUFFIX_CAPITALIZED="$(echo ${TEST_SUFFIX:0:1} | tr '[:lower:]' '[:upper:]')$(echo ${TEST_SUFFIX:1} | tr '[:upper:]' '[:lower:]')"
     
-    # Check appsettings.json
+    # Check appsettings.json Kestrel configuration
     if [ -f "${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}.Server/appsettings.json" ]; then
-        if grep -q "0.0.0.0:8081" "${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}.Server/appsettings.json"; then
-            test_result 0 "appsettings.json uses correct management port (8081)"
+        if grep -q "0.0.0.0:$TEST_SERVICE_PORT" "${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}.Server/appsettings.json" && \
+           grep -q "0.0.0.0:$TEST_MANAGEMENT_PORT" "${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}.Server/appsettings.json"; then
+            test_result 0 "appsettings.json Kestrel configuration uses correct ports ($TEST_SERVICE_PORT, $TEST_MANAGEMENT_PORT)"
         else
-            test_result 1 "appsettings.json does not use port 8081"
+            test_result 1 "appsettings.json Kestrel configuration does not use correct ports $TEST_SERVICE_PORT and $TEST_MANAGEMENT_PORT"
             port_validation_failed=1
         fi
     else
@@ -366,10 +367,10 @@ validate_port_configuration() {
     
     # Check launchSettings.json
     if [ -f "${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}.Server/Properties/launchSettings.json" ]; then
-        if grep -q "localhost:8081" "${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}.Server/Properties/launchSettings.json"; then
-            test_result 0 "launchSettings.json uses correct port (8081)"
+        if grep -q "localhost:$TEST_MANAGEMENT_PORT" "${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}.Server/Properties/launchSettings.json"; then
+            test_result 0 "launchSettings.json uses correct management port ($TEST_MANAGEMENT_PORT)"
         else
-            test_result 1 "launchSettings.json does not use port 8081"
+            test_result 1 "launchSettings.json does not use management port $TEST_MANAGEMENT_PORT"
             port_validation_failed=1
         fi
     else
@@ -379,17 +380,19 @@ validate_port_configuration() {
     
     # Check Server.cs file
     if [ -f "${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}.Server/${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}Server.cs" ]; then
-        if grep -q "0.0.0.0:8081" "${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}.Server/${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}Server.cs"; then
-            test_result 0 "Server.cs uses correct port (8081)"
+        # Check that Server.cs uses ASPNETCORE_URLS environment variable instead of hardcoded ports
+        if grep -q "ASPNETCORE_URLS" "${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}.Server/${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}Server.cs" || \
+           ! grep -q "UseUrls.*:8080\|UseUrls.*:8081" "${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}.Server/${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}Server.cs"; then
+            test_result 0 "Server.cs properly uses environment variables for port configuration"
         else
-            test_result 1 "Server.cs does not use port 8081"
+            test_result 1 "Server.cs contains hardcoded port configuration instead of using ASPNETCORE_URLS"
             port_validation_failed=1
         fi
         
-        if grep -q "localhost:8081" "${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}.Server/${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}Server.cs"; then
-            test_result 0 "Server.cs references correct localhost port (8081)"
+        if grep -q "localhost:$TEST_MANAGEMENT_PORT" "${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}.Server/${PREFIX_CAPITALIZED}${SUFFIX_CAPITALIZED}Server.cs"; then
+            test_result 0 "Server.cs references correct localhost management port ($TEST_MANAGEMENT_PORT)"
         else
-            test_result 1 "Server.cs does not reference localhost:8081"
+            test_result 1 "Server.cs does not reference localhost:$TEST_MANAGEMENT_PORT"
             port_validation_failed=1
         fi
     else
@@ -397,18 +400,18 @@ validate_port_configuration() {
         port_validation_failed=1
     fi
     
-    # Check ASPNETCORE_URLS in Dockerfile
+    # Check that ASPNETCORE_URLS is not hardcoded in Dockerfile (we use Kestrel config instead)
     if [ -f "Dockerfile" ]; then
-        if grep -q "ASPNETCORE_URLS=http://+:8080;http://+:8081" Dockerfile; then
-            test_result 0 "Dockerfile ASPNETCORE_URLS uses correct ports (8080;8081)"
+        if ! grep -q "ASPNETCORE_URLS=" Dockerfile; then
+            test_result 0 "Dockerfile correctly uses Kestrel configuration instead of hardcoded ASPNETCORE_URLS"
         else
-            test_result 1 "Dockerfile ASPNETCORE_URLS does not use ports 8080 and 8081"
+            test_result 1 "Dockerfile contains hardcoded ASPNETCORE_URLS (should use Kestrel configuration)"
             port_validation_failed=1
         fi
     fi
     
     if [ $port_validation_failed -eq 0 ]; then
-        test_result 0 "Port configuration validation passed - service correctly configured for ports 8080/8081"
+        test_result 0 "Port configuration validation passed - service correctly uses ports $TEST_SERVICE_PORT/$TEST_MANAGEMENT_PORT"
     else
         test_result 1 "Port configuration validation failed - service not properly configured for ports 8080/8081"
         return 1
@@ -542,27 +545,20 @@ test_service_connectivity() {
         test_result 1 "Metrics endpoint not accessible or missing metrics"
     fi
     
-    # Test REST API endpoints if they exist
+    # Test REST API endpoints - check auth endpoint which should be accessible
     local api_response
-    api_response=$(curl -s --connect-timeout 10 http://localhost:$TEST_SERVICE_PORT/api/$TEST_PREFIX 2>/dev/null || echo "")
-    if [ -n "$api_response" ]; then
-        test_result 0 "REST API endpoint accessible"
+    api_response=$(curl -s --connect-timeout 10 http://localhost:$TEST_SERVICE_PORT/api/auth/token -H "Content-Type: application/json" -d '{}' 2>/dev/null || echo "")
+    if echo "$api_response" | grep -q "error\|invalid" 2>/dev/null; then
+        test_result 0 "REST API auth endpoint accessible and responding"
     else
-        test_result 1 "REST API endpoint not accessible"
+        test_result 1 "REST API auth endpoint not accessible"
     fi
 }
 
-# Test monitoring infrastructure - enhanced
 test_monitoring() {
     log "\n${BLUE}Testing monitoring infrastructure...${NC}"
     
     cd "$TEMP_DIR/$TEST_SERVICE_NAME/$TEST_PREFIX-$TEST_SUFFIX"
-    
-    # Skip monitoring tests if docker-compose doesn't include them
-    if ! grep -q "prometheus\|grafana" docker-compose.yml 2>/dev/null; then
-        log "${YELLOW}Monitoring services not found in docker-compose.yml, skipping monitoring tests${NC}"
-        return 0
-    fi
     
     # Test Prometheus
     if curl -s --connect-timeout 15 http://localhost:9090/-/healthy >/dev/null 2>&1; then
@@ -583,6 +579,59 @@ test_monitoring() {
         test_result 0 "Grafana accessible"
     else
         test_result 1 "Grafana not accessible"
+    fi
+}
+
+# Test development environment configuration
+test_development_environment() {
+    log "\n${BLUE}Testing Development environment configuration...${NC}"
+    
+    cd "$TEMP_DIR/$TEST_SERVICE_NAME/$TEST_PREFIX-$TEST_SUFFIX"
+    
+    # Temporarily change to Development environment and restart service
+    log "${YELLOW}Switching to Development environment to test Swagger availability...${NC}"
+    
+    # Update docker-compose to use Development environment
+    sed -i.bak 's/ASPNETCORE_ENVIRONMENT=Production/ASPNETCORE_ENVIRONMENT=Development/' docker-compose.yml
+    
+    # Restart the service
+    if docker-compose up -d --force-recreate test-service >/dev/null 2>&1; then
+        test_result 0 "Service restarted in Development mode"
+        
+        # Wait for service to be ready
+        sleep 10
+        
+        # Test Swagger/OpenAPI documentation (should BE accessible in Development)
+        if curl -s --connect-timeout 15 http://localhost:$TEST_SERVICE_PORT/swagger/v1/swagger.json | grep -q "openapi\|swagger" 2>/dev/null; then
+            test_result 0 "Swagger/OpenAPI documentation correctly enabled in Development environment"
+        else
+            test_result 1 "Swagger/OpenAPI documentation not accessible in Development environment"
+        fi
+        
+        # Test Swagger UI (check HTTP response code rather than content)
+        local swagger_status
+        swagger_status=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 15 http://localhost:$TEST_SERVICE_PORT/swagger/index.html 2>/dev/null || echo "000")
+        if [ "$swagger_status" = "200" ]; then
+            test_result 0 "Swagger UI accessible in Development environment (HTTP 200)"
+        else
+            # Try alternative Swagger UI path
+            swagger_status=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 15 http://localhost:$TEST_SERVICE_PORT/swagger 2>/dev/null || echo "000")
+            if [ "$swagger_status" = "200" ] || [ "$swagger_status" = "301" ] || [ "$swagger_status" = "302" ]; then
+                test_result 0 "Swagger UI accessible in Development environment (HTTP $swagger_status)"
+            else
+                test_result 1 "Swagger UI not accessible in Development environment (HTTP $swagger_status)"
+            fi
+        fi
+        
+        # Restore Production environment
+        mv docker-compose.yml.bak docker-compose.yml
+        docker-compose up -d --force-recreate test-service >/dev/null 2>&1
+        sleep 5
+        log "${YELLOW}Restored Production environment${NC}"
+    else
+        test_result 1 "Failed to restart service in Development mode"
+        # Restore backup if restart failed
+        mv docker-compose.yml.bak docker-compose.yml
     fi
 }
 
@@ -651,11 +700,11 @@ test_rest_endpoints() {
     
     cd "$TEMP_DIR/$TEST_SERVICE_NAME/$TEST_PREFIX-$TEST_SUFFIX"
     
-    # Test Swagger/OpenAPI documentation
+    # Test Swagger/OpenAPI documentation (should NOT be accessible in Production)
     if curl -s --connect-timeout 10 http://localhost:$TEST_SERVICE_PORT/swagger/v1/swagger.json | grep -q "openapi\|swagger" 2>/dev/null; then
-        test_result 0 "Swagger/OpenAPI documentation accessible"
+        test_result 1 "Swagger/OpenAPI documentation accessible in Production (security risk)"
     else
-        test_result 1 "Swagger/OpenAPI documentation not accessible"
+        test_result 0 "Swagger/OpenAPI documentation correctly disabled in Production environment"
     fi
     
     # Test CORS if enabled
@@ -714,6 +763,7 @@ main() {
     test_docker_stack || exit 1
     test_service_connectivity || exit 1
     test_rest_endpoints || exit 1
+    test_development_environment || exit 1
     test_monitoring || exit 1
     # Test development scripts only if requested
     if [ "$test_scripts" = true ]; then
@@ -750,8 +800,9 @@ main() {
         log "${YELLOW}Generated service directory preserved at: $TEMP_DIR/$TEST_SERVICE_NAME/$TEST_PREFIX-$TEST_SUFFIX${NC}"
         log "\n${BLUE}🚀 Enhanced features validated:${NC}"
         log "${GREEN}  ✅ Configurable ports and endpoints${NC}"
-        log "${GREEN}  ✅ REST API with Swagger documentation${NC}"
+        log "${GREEN}  ✅ REST API with environment-aware Swagger documentation${NC}"
         log "${GREEN}  ✅ Health checks and monitoring endpoints${NC}"
+        log "${GREEN}  ✅ Production vs Development environment configuration${NC}"
         log "${GREEN}  ✅ Complete parameterization${NC}"
         log "${GREEN}  ✅ Docker containerization${NC}"
         log "${GREEN}  ✅ Cross-platform build scripts${NC}"
