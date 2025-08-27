@@ -121,11 +121,11 @@ public class Startup
         // Configure database connection
         
         // Configure database with optimized connection pooling
-        services.AddDbContext<AppDbContext>((serviceProvider, options) =>
+        if (isEphemeral)
         {
-            if (isEphemeral)
+            // Use Testcontainers PostgreSQL for ephemeral environment
+            services.AddDbContext<AppDbContext>((serviceProvider, options) =>
             {
-                // Use Testcontainers PostgreSQL for ephemeral environment
                 var ephemeralDbService = serviceProvider.GetRequiredService<EphemeralDatabaseService>();
                 var connectionString = ephemeralDbService.GetConnectionString();
                 
@@ -147,11 +147,15 @@ public class Startup
                 
                 // Configure connection pooling and logging for ephemeral mode
                 options.EnableDetailedErrors();
-                options.EnableSensitiveDataLogging(false);
-            }
-            else
+                options.EnableSensitiveDataLogging(Configuration["ASPNETCORE_ENVIRONMENT"] == "Development");
+                options.EnableServiceProviderCaching();
+            });
+        }
+        else
+        {
+            // Use regular PostgreSQL connection for production
+            services.AddDbContext<AppDbContext>(options =>
             {
-                // Use regular PostgreSQL connection for production
                 var connectionString = Configuration.GetConnectionString("DefaultConnection");
                 options.UseNpgsql(connectionString, npgsqlOptions =>
                 {
@@ -163,22 +167,19 @@ public class Startup
                     npgsqlOptions.CommandTimeout(
                         int.Parse(Configuration["Database:CommandTimeout"] ?? "30"));
                 });
-            }
 
-            // Enable sensitive data logging only in development
-            if (Configuration["ASPNETCORE_ENVIRONMENT"] == "Development")
-            {
-                options.EnableSensitiveDataLogging();
-                options.EnableDetailedErrors();
-            }
+                // Enable sensitive data logging only in development
+                if (Configuration["ASPNETCORE_ENVIRONMENT"] == "Development")
+                {
+                    options.EnableSensitiveDataLogging();
+                    options.EnableDetailedErrors();
+                }
 
-            // Configure connection pooling
-            options.EnableServiceProviderCaching();
-            options.EnableSensitiveDataLogging(false); // Disable in production
-        });
-
-        services.AddScoped<I{{ PrefixName }}Repository, {{ PrefixName }}Repository>();
-        
+                // Configure connection pooling
+                options.EnableServiceProviderCaching();
+            });
+            services.AddScoped<I{{ PrefixName }}Repository, {{ PrefixName }}Repository>();
+        }        
         
         // Register health check services
         services.AddScoped<DatabaseHealthCheck>();
@@ -264,7 +265,7 @@ public class Startup
         // Determine environment modes (same as in ConfigureServices)
         bool isEphemeral = Configuration["ASPNETCORE_ENVIRONMENT"] == "Ephemeral" || 
                           Configuration["SPRING_PROFILES_ACTIVE"]?.Contains("ephemeral") == true;
-        bool enableMigrations = bool.Parse(Configuration["Database:EnableMigrations"] ?? "true");
+        bool enableMigrations = bool.Parse(Configuration["Database:EnableMigrations"] ?? "false");
         bool dropCreateDatabase = bool.Parse(Configuration["Database:DropCreateDatabase"] ?? "false");
         
         // Handle database setup based on environment
