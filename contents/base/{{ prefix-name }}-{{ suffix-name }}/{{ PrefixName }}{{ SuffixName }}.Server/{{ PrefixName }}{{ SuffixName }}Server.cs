@@ -21,6 +21,11 @@ public class {{ PrefixName }}{{ SuffixName }}Server
         {
             builder.WebHost.UseUrls($"http://0.0.0.0:{httpPort}");
         }
+        else
+        {
+            // Default for tests when no specific port is set
+            builder.WebHost.UseUrls("http://0.0.0.0:5031");
+        }
         
         // Configure graceful shutdown
         builder.Host.ConfigureHostOptions(options =>
@@ -93,7 +98,7 @@ public class {{ PrefixName }}{{ SuffixName }}Server
      public {{ PrefixName }}{{ SuffixName }}Server WithRandomPorts()
     {
         // Use fixed test port for integration tests to avoid port discovery issues
-        Environment.SetEnvironmentVariable("HTTP_PORT", "15031");
+        Environment.SetEnvironmentVariable("HTTP_PORT", "5031");
         return this;
     }
 

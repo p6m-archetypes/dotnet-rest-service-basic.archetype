@@ -26,18 +26,20 @@ public class ApplicationFixture: IDisposable
             throw new InvalidOperationException("Failed to get HTTP server URL");
         }
         
-        
         _httpClient = new HttpClient();
         _client = {{ PrefixName }}{{ SuffixName }}Client.Of(_httpClient, httpUrl);
         
+        // Initialize async components
+        InitializeAsync(httpUrl).GetAwaiter().GetResult();
+    }
+    
+    private async Task InitializeAsync(string httpUrl)
+    {
         // Wait for server to be ready
-        WaitForServerReady(httpUrl).Wait();
+        await WaitForServerReady(httpUrl);
         
         // Get authentication token for tests
-        var tokenTask = GetAuthTokenAsync(httpUrl);
-        tokenTask.Wait();
-        var token = tokenTask.Result;
-        
+        var token = await GetAuthTokenAsync(httpUrl);
         _client.SetAuthorizationToken(token);
     }
     
@@ -80,15 +82,38 @@ public class ApplicationFixture: IDisposable
         
         var tokenUrl = $"{baseUrl}/api/auth/token";
         
-        var response = await _httpClient.PostAsJsonAsync(tokenUrl, tokenRequest);
-        if (!response.IsSuccessStatusCode)
+        // Add retry logic for auth token request
+        for (int i = 0; i < 5; i++)
         {
-            var content = await response.Content.ReadAsStringAsync();
-            throw new InvalidOperationException($"Failed to get auth token from {tokenUrl}. Status: {response.StatusCode}, Content: {content}");
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync(tokenUrl, tokenRequest);
+                if (response.IsSuccessStatusCode)
+                {
+                    var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>();
+                    return tokenResponse?.AccessToken ?? throw new InvalidOperationException("Failed to get auth token");
+                }
+                
+                var content = await response.Content.ReadAsStringAsync();
+                
+                // If it's 404, the endpoint might not be ready yet, retry
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound && i < 4)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(2));
+                    continue;
+                }
+                
+                throw new InvalidOperationException($"Failed to get auth token from {tokenUrl}. Status: {response.StatusCode}, Content: {content}");
+            }
+            catch (HttpRequestException ex) when (i < 4)
+            {
+                // Connection error, retry
+                await Task.Delay(TimeSpan.FromSeconds(2));
+                continue;
+            }
         }
         
-        var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>();
-        return tokenResponse?.AccessToken ?? throw new InvalidOperationException("Failed to get auth token");
+        throw new InvalidOperationException($"Failed to get auth token after multiple retries from {tokenUrl}");
     }
     
     public {{ PrefixName }}{{ SuffixName }}Client GetClient() => _client;
@@ -105,4 +130,17 @@ public class ApplicationFixture: IDisposable
 public class ApplicationCollection : ICollectionFixture<ApplicationFixture>
 {
     // This class has no code; it's just a marker for the test collection
+}
+
+public class TokenRequest
+{
+    public string ClientId { get; set; } = string.Empty;
+    public string ClientSecret { get; set; } = string.Empty;
+}
+
+public class TokenResponse
+{
+    public string AccessToken { get; set; } = string.Empty;
+    public string TokenType { get; set; } = string.Empty;
+    public int ExpiresIn { get; set; }
 }

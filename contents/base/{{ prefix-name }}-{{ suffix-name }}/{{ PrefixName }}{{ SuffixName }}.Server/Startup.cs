@@ -36,7 +36,12 @@ public class Startup
                           Configuration["SPRING_PROFILES_ACTIVE"]?.Contains("ephemeral") == true;
         
         // Add services to the container.
-        services.AddControllers();
+        services.AddControllers()
+            .ConfigureApplicationPartManager(manager =>
+            {
+                // Explicitly ensure our controllers assembly is included
+                manager.ApplicationParts.Add(new Microsoft.AspNetCore.Mvc.ApplicationParts.AssemblyPart(typeof(Controllers.AuthController).Assembly));
+            });
         
         // Add Swagger/OpenAPI support
         services.AddEndpointsApiExplorer();
