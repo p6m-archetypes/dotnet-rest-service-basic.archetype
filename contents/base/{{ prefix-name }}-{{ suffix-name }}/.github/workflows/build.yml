@@ -57,6 +57,7 @@ jobs:
           registry: ${{'{'}}{ vars.ARTIFACTORY_HOSTNAME }}/{{ org-name }}-{{ solution-name }}-docker-local/applications
           push: true
           skip-setup: true
+          platforms: linux/amd64,linux/arm64
           builder-name: ${{'{'}}{ steps.buildx.outputs.name }}
           secrets: |
             artifactory-token=${{'{'}}{ secrets.ARTIFACTORY_TOKEN }}
