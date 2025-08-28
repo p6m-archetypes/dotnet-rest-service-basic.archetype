@@ -24,6 +24,12 @@ dotnet test {{ PrefixName }}{{ SuffixName }}.UnitTests
 # Run integration tests only (uses ephemeral PostgreSQL containers)
 dotnet test {{ PrefixName }}{{ SuffixName }}.IntegrationTests
 
+# Run unit tests only (filter-based)
+dotnet test --filter "Category!=Integration"
+
+# Run integration tests only (filter-based)
+dotnet test --filter "Category=Integration"
+
 # Run with coverage
 dotnet test --collect:"XPlat Code Coverage"
 

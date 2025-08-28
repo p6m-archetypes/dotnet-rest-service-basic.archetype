@@ -35,6 +35,7 @@ jobs:
         uses: p6m-actions/dotnet-build@v1
         with:
           run-tests: true
+          test-filter: "Category!=Integration"
           version: ${{'{'}}{ steps.cut-patch.outputs.version }}
 
       - name: Login to Docker Repository

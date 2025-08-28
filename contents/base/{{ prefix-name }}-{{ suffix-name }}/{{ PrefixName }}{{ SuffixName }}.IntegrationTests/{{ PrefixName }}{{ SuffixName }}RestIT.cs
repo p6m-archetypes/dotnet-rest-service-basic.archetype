@@ -9,6 +9,7 @@ using Xunit;
 namespace {{ PrefixName }}{{ SuffixName }}.IntegrationTests;
 
 [Collection("ApplicationCollection")]
+[Trait("Category", "Integration")]
 public class {{ PrefixName }}{{ SuffixName }}RestIt(ITestOutputHelper testOutputHelper, ApplicationFixture applicationFixture)
 {
     private readonly ApplicationFixture _applicationFixture = applicationFixture;
