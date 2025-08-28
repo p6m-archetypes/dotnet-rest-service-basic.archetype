@@ -92,6 +92,9 @@ HTTP_PORT=6001 dotnet run --project {{ PrefixName }}{{ SuffixName }}.Server
 # Debug logging
 LOG_LEVEL=Debug CORE_LOG_LEVEL=Debug dotnet run --project {{ PrefixName }}{{ SuffixName }}.Server
 
+# Enable database health checks (disabled by default)
+HealthChecks__Database__Enabled=true dotnet run --project {{ PrefixName }}{{ SuffixName }}.Server
+
 # Custom database connection
 DATABASE_URL="Host=myhost;Port=5432;Database=mydb;Username=user;Password=pass" dotnet run --project {{ PrefixName }}{{ SuffixName }}.Server
 ```

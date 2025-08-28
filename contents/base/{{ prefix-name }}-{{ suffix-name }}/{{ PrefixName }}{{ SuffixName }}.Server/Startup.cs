@@ -186,11 +186,7 @@ public class Startup
         services.AddScoped<ServiceHealthCheck>();
         
         // Enhanced health checks with dependency validation
-        services.AddHealthChecks()
-            .AddCheck<DatabaseHealthCheck>(
-                "database",
-                failureStatus: HealthStatus.Unhealthy,
-                tags: ["ready", "db"])
+        var healthChecksBuilder = services.AddHealthChecks()
             .AddCheck<ServiceHealthCheck>(
                 "services",
                 failureStatus: HealthStatus.Unhealthy,
@@ -198,6 +194,15 @@ public class Startup
             .AddCheck("self", 
                 () => HealthCheckResult.Healthy("Application is running"),
                 tags: ["live"]);
+
+        // Only add database health check if explicitly enabled
+        if (Configuration.GetValue<bool>("HealthChecks:Database:Enabled", false) || isEphemeral)
+        {
+            healthChecksBuilder.AddCheck<DatabaseHealthCheck>(
+                "database",
+                failureStatus: HealthStatus.Unhealthy,
+                tags: ["ready", "db"]);
+        }
 
         // Enhanced OpenTelemetry configuration with custom metrics
         services.AddOpenTelemetry()
