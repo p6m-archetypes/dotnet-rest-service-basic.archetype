@@ -40,3 +40,40 @@ Features include:
 - Load tests using [k6](https://k6.io/) for both HTTP and gRPC calls
 - Application configuration through property files, environment variables, and CLI arguments.
 - Integration with [Tilt](https://tilt.dev/) to support local k8s development
+
+## Testing & Validation
+
+### Archetype Validation
+
+To validate the archetype generates correctly and all features work:
+
+```bash
+./validate_archetype.sh
+```
+
+This will generate a test service and run comprehensive validation including:
+- Template substitution validation
+- .NET build and test execution
+- Docker containerization
+- Service connectivity and health checks
+- REST endpoint functionality
+- Monitoring infrastructure
+
+### Manual Endpoint Testing
+
+For manual testing of generated services, you can use standard HTTP tools:
+
+```bash
+# Test health endpoints
+curl http://localhost:8081/health
+curl http://localhost:8081/health/live
+curl http://localhost:8081/health/ready
+
+# Test auth endpoint
+curl -X POST http://localhost:8080/api/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"clientId":"admin-client","clientSecret":"admin-secret"}'
+
+# Test API endpoints (requires auth token)
+curl http://localhost:8080/api/[service-name]
+```
