@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  {{ prefix-name }}-{{ suffix-name }}:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: {{ prefix-name }}-{{ suffix-name }}
+    ports:
+      - "{{ service-port }}:{{ service-port }}"  # gRPC port
+      - "{{ management-port }}:{{ management-port }}"  # Management HTTP port
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=mssql,1433;Database={{ PrefixName}}{{ SuffixName }};User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:{{ service-port }};http://+:{{ management-port }}
+      - LOGGING_STRUCTURED=true
+      - GRPC_PORT={{ service-port }}
+      - MANAGEMENT_PORT={{ management-port }}
+    depends_on:
+      mssql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:{{ management-port }}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - {{ prefix-name }}-{{ suffix-name }}-network
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: {{ prefix-name}}-{{ suffix-name }}-mssql
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=YourStrong@Passw0rd
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - {{ prefix-name }}-{{ suffix-name }}-network
+
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: {{ prefix-name }}-{{ suffix-name }}-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - {{ prefix-name }}-{{ suffix-name }}
+    restart: unless-stopped
+    networks:
+      - {{ prefix-name }}-{{ suffix-name }}-network
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: {{ prefix-name }}-{{ suffix-name }}-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - {{ prefix-name }}-{{ suffix-name }}-network
+
+volumes:
+  mssql_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  {{ prefix-name }}-{{ suffix-name }}-network:
+    driver: bridge

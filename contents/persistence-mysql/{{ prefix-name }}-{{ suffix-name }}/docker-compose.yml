@@ -1,0 +1,113 @@
+version: "3.8"
+
+services:
+  {{ prefix-name }}-{{ suffix-name }}:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: {{ prefix-name }}-{{ suffix-name }}
+    ports:
+      - "5030:5030" # gRPC port
+      - "5031:5031" # Management HTTP port
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=mysql;Port=3306;Database=example_service_db;Uid=root;Pwd=mysql_password;charset=utf8mb4
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5030;http://+:5031
+      - LOGGING_STRUCTURED=true
+      - GRPC_PORT=5030
+      - MANAGEMENT_PORT=5031
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5031/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - {{ prefix-name }}-{{ suffix-name }}-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: {{ prefix-name }}-{{ suffix-name }}-mysql
+    environment:
+      - MYSQL_DATABASE=example_service_db
+      - MYSQL_ROOT_PASSWORD=mysql_password
+      - MYSQL_CHARACTER_SET_SERVER=utf8mb4
+      - MYSQL_COLLATION_SERVER=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-uroot",
+          "-pmysql_password",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - {{ prefix-name }}-{{ suffix-name }}-network
+
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: {{ prefix-name }}-{{ suffix-name }}-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - {{ prefix-name }}-{{ suffix-name }}
+    restart: unless-stopped
+    networks:
+      - {{ prefix-name }}-{{ suffix-name }}-network
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: {{ prefix-name }}-{{ suffix-name }}-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - {{ prefix-name }}-{{ suffix-name }}-network
+
+volumes:
+  mysql_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  {{ prefix-name }}-{{ suffix-name }}-network:
+    driver: bridge

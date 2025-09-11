@@ -1,9 +1,9 @@
 ---
-description: ".NET gRPC Service, Namespaced, Modular Microservice"
-authors: ["Maksym Mukhanov"]
+description: ".NET REST Service, Namespaced, Modular Microservice"
+authors: ["Jimmie Fulton <jimmie@ybor.ai>"]
 languages: ["C#"]
-frameworks: [".NET", "Entities Framework", "gRPC"]
-tags: ["Modular", "Service", "Microservice", "gRPC"]
+frameworks: [".NET", "Entities Framework", "REST"]
+tags: ["Modular", "Service", "Microservice", "REST"]
 
 requires:
   archetect: 2.0.0

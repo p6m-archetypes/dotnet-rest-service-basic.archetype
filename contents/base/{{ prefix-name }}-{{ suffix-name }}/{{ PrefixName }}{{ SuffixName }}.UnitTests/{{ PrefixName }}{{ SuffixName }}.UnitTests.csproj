@@ -17,8 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\{{ PrefixName }}{{ SuffixName }}.Core\{{ PrefixName }}{{ SuffixName }}.Core.csproj" />
-    <ProjectReference Include="..\{{ PrefixName }}{{ SuffixName }}.Persistence\{{ PrefixName }}{{ SuffixName }}.Persistence.csproj" />
+    <ProjectReference Include="..\{{ PrefixName }}{{ SuffixName }}.Core\{{ PrefixName }}{{ SuffixName }}.Core.csproj" />{% if persistence != 'None' %}
+    <ProjectReference Include="..\{{ PrefixName }}{{ SuffixName }}.Persistence\{{ PrefixName }}{{ SuffixName }}.Persistence.csproj" />{% endif %}
   </ItemGroup>
 
   <ItemGroup>

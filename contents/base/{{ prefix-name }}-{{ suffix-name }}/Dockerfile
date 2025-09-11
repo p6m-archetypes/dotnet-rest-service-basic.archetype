@@ -8,8 +8,8 @@ COPY Directory.Build.props ./
 COPY NuGet.config ./
 COPY {{ PrefixName }}{{ SuffixName }}.API/*.csproj ./{{ PrefixName }}{{ SuffixName }}.API/
 COPY {{ PrefixName }}{{ SuffixName }}.Client/*.csproj ./{{ PrefixName }}{{ SuffixName }}.Client/
-COPY {{ PrefixName }}{{ SuffixName }}.Core/*.csproj ./{{ PrefixName }}{{ SuffixName }}.Core/
-COPY {{ PrefixName }}{{ SuffixName }}.Persistence/*.csproj ./{{ PrefixName }}{{ SuffixName }}.Persistence/
+COPY {{ PrefixName }}{{ SuffixName }}.Core/*.csproj ./{{ PrefixName }}{{ SuffixName }}.Core/{% if persistence != 'None' %}
+COPY {{ PrefixName }}{{ SuffixName }}.Persistence/*.csproj ./{{ PrefixName }}{{ SuffixName }}.Persistence/{% endif %}
 COPY {{ PrefixName }}{{ SuffixName }}.Server/*.csproj ./{{ PrefixName }}{{ SuffixName }}.Server/
 COPY {{ PrefixName }}{{ SuffixName }}.IntegrationTests/*.csproj ./{{ PrefixName }}{{ SuffixName }}.IntegrationTests/
 COPY {{ PrefixName }}{{ SuffixName }}.UnitTests/*.csproj ./{{ PrefixName }}{{ SuffixName }}.UnitTests/
@@ -49,7 +49,7 @@ EXPOSE {{ management-port }}
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:{{ management-port }}/health/live || exit 1
+  CMD curl -f http://localhost:{{ management-port }}/health/live || exit 1
 
 # Environment variables for runtime configuration
 ENV ASPNETCORE_ENVIRONMENT=Production
