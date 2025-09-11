@@ -105,7 +105,7 @@ public class ApplicationFixture: IDisposable
                 
                 throw new InvalidOperationException($"Failed to get auth token from {tokenUrl}. Status: {response.StatusCode}, Content: {content}");
             }
-            catch (HttpRequestException ex) when (i < 4)
+            catch (HttpRequestException) when (i < 4)
             {
                 // Connection error, retry
                 await Task.Delay(TimeSpan.FromSeconds(2));

@@ -30,14 +30,14 @@ public class {{ PrefixName }}{{ SuffixName }}Client : I{{ PrefixName }}{{ Suffix
         return new {{ PrefixName }}{{ SuffixName }}Client(httpClient, baseUrl, ownsHttpClient: false);
     }
 
-    public async Task<Create{{ PrefixName }}Response> Create{{ PrefixName }}Async({{ PrefixName }}Dto request)
+    public async Task<Create{{ PrefixName }}Response> Create{{ PrefixName }}({{ PrefixName }}Dto request)
     {
         var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/api/{{ PrefixName }}{{ SuffixName }}", request);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<Create{{ PrefixName }}Response>() ?? throw new InvalidOperationException("Failed to deserialize response");
     }
 
-    public async Task<Get{{ PrefixName }}sResponse> Get{{ PrefixName }}sAsync(Get{{ PrefixName }}sRequest request)
+    public async Task<Get{{ PrefixName }}sResponse> Get{{ PrefixName }}s(Get{{ PrefixName }}sRequest request)
     {
         var queryString = $"?startPage={request.StartPage}&pageSize={request.PageSize}";
         var response = await _httpClient.GetAsync($"{_baseUrl}/api/{{ PrefixName }}{{ SuffixName }}{queryString}");
@@ -45,14 +45,14 @@ public class {{ PrefixName }}{{ SuffixName }}Client : I{{ PrefixName }}{{ Suffix
         return await response.Content.ReadFromJsonAsync<Get{{ PrefixName }}sResponse>() ?? throw new InvalidOperationException("Failed to deserialize response");
     }
 
-    public async Task<Get{{ PrefixName }}Response> Get{{ PrefixName }}Async(string id)
+    public async Task<Get{{ PrefixName }}Response> Get{{ PrefixName }}(string id)
     {
         var response = await _httpClient.GetAsync($"{_baseUrl}/api/{{ PrefixName }}{{ SuffixName }}/{id}");
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<Get{{ PrefixName }}Response>() ?? throw new InvalidOperationException("Failed to deserialize response");
     }
 
-    public async Task<Update{{ PrefixName }}Response> Update{{ PrefixName }}Async({{ PrefixName }}Dto request)
+    public async Task<Update{{ PrefixName }}Response> Update{{ PrefixName }}({{ PrefixName }}Dto request)
     {
         if (string.IsNullOrEmpty(request.Id))
             throw new ArgumentException("Id is required for update operation", nameof(request));
@@ -62,7 +62,7 @@ public class {{ PrefixName }}{{ SuffixName }}Client : I{{ PrefixName }}{{ Suffix
         return await response.Content.ReadFromJsonAsync<Update{{ PrefixName }}Response>() ?? throw new InvalidOperationException("Failed to deserialize response");
     }
 
-    public async Task<Delete{{ PrefixName }}Response> Delete{{ PrefixName }}Async(string id)
+    public async Task<Delete{{ PrefixName }}Response> Delete{{ PrefixName }}(string id)
     {
         var response = await _httpClient.DeleteAsync($"{_baseUrl}/api/{{ PrefixName }}{{ SuffixName }}/{id}");
         response.EnsureSuccessStatusCode();

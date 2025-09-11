@@ -1,21 +1,22 @@
-
-using {{ PrefixName}}{{ SuffixName }}.Server.Grpc;
+using System.Text.Json;
+using {{ PrefixName }}{{ SuffixName }}.Core;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.OpenApi.Models;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using OpenTelemetry;
 using CorrelationId.DependencyInjection;
 using CorrelationId;
-using {{ PrefixName}}{{ SuffixName }}.Core;
-using {{ PrefixName}}{{ SuffixName }}.Core.Services;
-using {{ PrefixName}}{{ SuffixName }}.Server.Services;
-using {{ PrefixName}}{{ SuffixName }}.Server.Interceptors;
-using {{ PrefixName}}{{ SuffixName }}.Server.HealthChecks;
-using System.Text.Json;
+using {{ PrefixName }}{{ SuffixName }}.Core.Services;
+using {{ PrefixName }}{{ SuffixName }}.Server.Services;
+using {{ PrefixName }}{{ SuffixName }}.Server.HealthChecks;
+using {{ PrefixName }}{{ SuffixName }}.Server.Middleware;
 
 
-namespace {{ PrefixName}}{{ SuffixName }}.Server;
+namespace {{ PrefixName }}{{ SuffixName }}.Server;
 
 public class Startup
 {
@@ -24,7 +25,6 @@ public class Startup
         Configuration = configuration;
     }
     public IConfigurationRoot Configuration { get; }
-
     public void ConfigureServices(IServiceCollection services)
     {
         // Determine environment modes
@@ -32,56 +32,85 @@ public class Startup
                           Configuration["SPRING_PROFILES_ACTIVE"]?.Contains("ephemeral") == true;
         
         // Add services to the container.
-        services.AddGrpc(options =>
-        {
-            options.Interceptors.Add<MetricsInterceptor>();
-            options.Interceptors.Add<GlobalExceptionInterceptor>();
-            
-            // Skip authorization for ephemeral environments
-            if (!isEphemeral)
+        services.AddControllers()
+            .ConfigureApplicationPartManager(manager =>
             {
-                options.Interceptors.Add<AuthorizationInterceptor>();
-            }
+                // Explicitly ensure our controllers assembly is included
+                manager.ApplicationParts.Add(new Microsoft.AspNetCore.Mvc.ApplicationParts.AssemblyPart(typeof(Controllers.AuthController).Assembly));
+            });
+        
+        // Add Swagger/OpenAPI support
+        services.AddEndpointsApiExplorer();
+        services.AddSwaggerGen(c =>
+        {
+            c.SwaggerDoc("v1", new OpenApiInfo { Title = "{{ PrefixName }}{{ SuffixName }} API", Version = "v1" });
+            c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                Description = "JWT Authorization header using the Bearer scheme.",
+                Name = "Authorization",
+                In = ParameterLocation.Header,
+                Type = SecuritySchemeType.ApiKey,
+                Scheme = "Bearer"
+            });
+            c.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                    Array.Empty<string>()
+                }
+            });
         });
-        services.AddGrpcReflection();
-        services.AddControllers();
 
         // Add correlation ID support
         services.AddHttpContextAccessor();
         services.AddDefaultCorrelationId();
 
 
-        // Configure authorization (authentication happens at API Gateway)
+        // Configure JWT authentication
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = Configuration["Authentication:Jwt:Issuer"] ?? "{{ PrefixName }}{{ SuffixName }}",
+                    ValidAudience = Configuration["Authentication:Jwt:Audience"] ?? "{{ PrefixName }}{{ SuffixName }}API",
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Authentication:Jwt:SecretKey"] ?? "ThisIsAVerySecretKeyForDevelopmentOnly123456789"))
+                };
+            });
+
         // Configure authentication and authorization services
         services.AddScoped<IAuthenticationService, JwtAuthenticationService>();
         
-        // Skip authorization services for ephemeral environments
-        if (!isEphemeral)
-        {
-            services.AddScoped<IApiGatewayJwtValidator, ApiGatewayJwtValidator>();
-            services.AddScoped<AuthorizationInterceptor>();
-        }
 
         // Add authorization for potential future policy-based authorization
         services.AddAuthorization();
 
         // Add metrics service
         services.AddSingleton<MetricsService>();
-        services.AddScoped<MetricsInterceptor>();
 
         // Add graceful shutdown service
         services.AddHostedService<Services.GracefulShutdownService>();
 
-        services.AddScoped<{{ PrefixName}}{{ SuffixName }}Core>();
+        services.AddScoped<{{ PrefixName }}{{ SuffixName }}Core>();
         services.AddScoped<IValidationService, ValidationService>();
-        services.AddScoped<GlobalExceptionInterceptor>();
         
         
         // Register health check services
         services.AddScoped<ServiceHealthCheck>();
         
         // Enhanced health checks with dependency validation
-        services.AddHealthChecks()
+        var healthChecksBuilder = services.AddHealthChecks()
             .AddCheck<ServiceHealthCheck>(
                 "services",
                 failureStatus: HealthStatus.Unhealthy,
@@ -93,7 +122,7 @@ public class Startup
         // Enhanced OpenTelemetry configuration with custom metrics
         services.AddOpenTelemetry()
             .ConfigureResource(resource => resource.AddService(
-                Configuration["Application:Name"] ?? "example-service",
+                Configuration["Application:Name"] ?? "project-prefix-project-suffix",
                 Configuration["Application:Version"] ?? "1.0.0",
                 serviceInstanceId: Environment.MachineName
             ))
@@ -101,7 +130,7 @@ public class Startup
             {
                 metrics
                     .AddHttpClientInstrumentation()
-                    .AddMeter("{{ PrefixName}}{{ SuffixName }}"); // Add our custom metrics
+                    .AddMeter("{{ PrefixName }}{{ SuffixName }}"); // Add our custom metrics
                 
                 // Export to multiple endpoints
                 if (Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] != null)
@@ -137,8 +166,7 @@ public class Startup
                         options.SetDbStatementForText = true;
                         options.SetDbStatementForStoredProcedure = true;
                     })
-                    .AddGrpcCoreInstrumentation()
-                    .SetSampler(new TraceIdRatioBasedSampler(
+                        .SetSampler(new TraceIdRatioBasedSampler(
                         double.Parse(Configuration["OTEL_TRACES_SAMPLER_ARG"] ?? "1.0")));
                 
                 // Export traces
@@ -157,34 +185,39 @@ public class Startup
         // Determine environment modes (same as in ConfigureServices)
         bool isEphemeral = Configuration["ASPNETCORE_ENVIRONMENT"] == "Ephemeral" || 
                           Configuration["SPRING_PROFILES_ACTIVE"]?.Contains("ephemeral") == true;
-        bool enableMigrations = bool.Parse(Configuration["Database:EnableMigrations"] ?? "true");
+        bool enableMigrations = bool.Parse(Configuration["Database:EnableMigrations"] ?? "false");
         bool dropCreateDatabase = bool.Parse(Configuration["Database:DropCreateDatabase"] ?? "false");
         
-        // Handle database setup based on environment
-        if (enableMigrations)
-        {
-            using (var scope = app.Services.CreateScope())
-            {
-                var servicesProvider = scope.ServiceProvider;
-                var logger = servicesProvider.GetRequiredService<ILogger<Startup>>();
-            }
-        }
-        else
-        {
-            var logger = app.Services.GetRequiredService<ILogger<Startup>>();
-            logger.LogWarning("Database setup skipped - enableMigrations: {EnableMigrations}", enableMigrations);
-        }
+        var logger = app.Services.GetRequiredService<ILogger<Startup>>();
 
         // Configure the HTTP request pipeline.
         // Add correlation ID middleware early in the pipeline
         app.UseCorrelationId();
         
-        // Note: Authentication happens at API Gateway, authorization in gRPC interceptor
+        // Add global exception handling
+        app.UseMiddleware<GlobalExceptionMiddleware>();
         
-        app.MapGrpcReflectionService().AllowAnonymous();
-        app.MapGrpcService<{{ PrefixName}}{{ SuffixName }}GrpcImpl>();
+        // Add metrics middleware
+        app.UseMiddleware<MetricsMiddleware>();
+        
+        // Add Swagger UI (only in development/ephemeral environments)
+        if (app.Environment.IsDevelopment() || isEphemeral)
+        {
+            app.UseSwagger();
+            app.UseSwaggerUI(c => 
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "{{ PrefixName }}{{ SuffixName }} API V1");
+                c.RoutePrefix = "swagger";
+            });
+        }
+        
+        app.UseRouting();
+        
+        app.UseAuthentication();
+        app.UseAuthorization();
+        
         app.MapControllers();
-        app.MapGet("/", () => "{{ PrefixName}}{{ SuffixName }}");
+        app.MapGet("/", () => "{{ PrefixName }}{{ SuffixName }} REST API Service");
 
         app.MapPrometheusScrapingEndpoint("/metrics");
         
@@ -222,13 +255,5 @@ public class Startup
         {
             Predicate = check => check.Tags.Contains("ready")
         });
-
-        // Ephemeral mode logging - persistence layer has been removed
-        if (isEphemeral)
-        {
-            var logger = app.Services.GetRequiredService<ILogger<Startup>>();
-            logger.LogInformation("Running in ephemeral mode (persistence layer removed)");
-        }
     }
 }
-

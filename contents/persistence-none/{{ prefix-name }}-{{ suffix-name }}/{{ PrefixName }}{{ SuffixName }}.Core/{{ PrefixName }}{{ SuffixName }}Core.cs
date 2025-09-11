@@ -1,17 +1,21 @@
-using {{ PrefixName}}{{ SuffixName }}.API;
-using {{ PrefixName}}{{ SuffixName }}.Core.Services;
+using {{ PrefixName }}{{ SuffixName }}.API;
+using {{ PrefixName }}{{ SuffixName }}.API.Dtos;
+using {{ PrefixName }}{{ SuffixName }}.API.Logger;
+using {{ PrefixName }}{{ SuffixName }}.Core.Services;
+using {{ PrefixName }}{{ SuffixName }}.Core.Exceptions;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics; 
 
-namespace {{ PrefixName}}{{ SuffixName }}.Core;
+namespace {{ PrefixName }}{{ SuffixName }}.Core;
 
-public class {{ PrefixName }}{{ SuffixName }}Core : I{{ PrefixName }}{{ SuffixName }}
+public class {{ PrefixName }}{{ SuffixName }}Core : I{{ PrefixName }}{{ SuffixName }}Service
 {
     private readonly IValidationService _validationService;
-    private readonly ILogger<{{ PrefixName}}{{ SuffixName }}Core> _logger;
+    private readonly ILogger<{{ PrefixName }}{{ SuffixName }}Core> _logger;
        
-    public {{ PrefixName}}{{ SuffixName }}Core(
+    public {{ PrefixName }}{{ SuffixName }}Core(
         IValidationService validationService,
-        ILogger<{{ PrefixName}}{{ SuffixName }}Core> logger) 
+        ILogger<{{ PrefixName }}{{ SuffixName }}Core> logger) 
     {
         _validationService = validationService;
         _logger = logger;
@@ -38,7 +42,7 @@ public class {{ PrefixName }}{{ SuffixName }}Core : I{{ PrefixName }}{{ SuffixNa
         });
     }
 
-    public Task<Get{{ PrefixName }}Response> Get{{ PrefixName }}(Get{{ PrefixName }}Request request)
+    public Task<Get{{ PrefixName }}Response> Get{{ PrefixName }}(string id)
     { 
         return Task.FromResult(new Get{{ PrefixName }}Response
         {
@@ -62,7 +66,7 @@ public class {{ PrefixName }}{{ SuffixName }}Core : I{{ PrefixName }}{{ SuffixNa
         });
     }
 
-    public Task<Delete{{ PrefixName }}Response> Delete{{ PrefixName }}(Delete{{ PrefixName }}Request request)
+    public Task<Delete{{ PrefixName }}Response> Delete{{ PrefixName }}(string id)
     {
         return Task.FromResult(new Delete{{ PrefixName }}Response { Deleted = false });
     }

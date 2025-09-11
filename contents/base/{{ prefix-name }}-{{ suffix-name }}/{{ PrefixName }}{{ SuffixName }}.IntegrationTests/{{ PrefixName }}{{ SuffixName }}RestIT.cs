@@ -21,7 +21,7 @@ public class {{ PrefixName }}{{ SuffixName }}RestIt(ITestOutputHelper testOutput
     
         //Act
         var createRequest = new {{ PrefixName }}Dto { Name = Guid.NewGuid().ToString() };
-        var response = await _client.Create{{ PrefixName }}Async(createRequest);
+        var response = await _client.Create{{ PrefixName }}(createRequest);
         
         //Assert
         var dto = response.{{ PrefixName }};
@@ -35,12 +35,12 @@ public class {{ PrefixName }}{{ SuffixName }}RestIt(ITestOutputHelper testOutput
         testOutputHelper.WriteLine("Test_Get{{ PrefixName }}s");
         
         //Arrange
-        var beforeTotal = (await _client.Get{{ PrefixName }}sAsync(new Get{{ PrefixName }}sRequest {StartPage = 1, PageSize = 4})).TotalElements;
+        var beforeTotal = (await _client.Get{{ PrefixName }}s(new Get{{ PrefixName }}sRequest {StartPage = 1, PageSize = 4})).TotalElements;
         
         //Act
         var createRequest = new {{ PrefixName }}Dto { Name = Guid.NewGuid().ToString() };
-        await _client.Create{{ PrefixName }}Async(createRequest);
-        var response = await _client.Get{{ PrefixName }}sAsync(new Get{{ PrefixName }}sRequest {StartPage = 1, PageSize = 4});
+        await _client.Create{{ PrefixName }}(createRequest);
+        var response = await _client.Get{{ PrefixName }}s(new Get{{ PrefixName }}sRequest {StartPage = 1, PageSize = 4});
         
         //Assert
         
@@ -52,10 +52,10 @@ public class {{ PrefixName }}{{ SuffixName }}RestIt(ITestOutputHelper testOutput
     {
         //Arrange
         var request = new {{ PrefixName }}Dto { Name = Guid.NewGuid().ToString() };
-        var createResponse = await _client.Create{{ PrefixName }}Async(request);
+        var createResponse = await _client.Create{{ PrefixName }}(request);
     
         //Act
-        var response = await _client.Get{{ PrefixName }}Async(createResponse.{{ PrefixName }}.Id!);
+        var response = await _client.Get{{ PrefixName }}(createResponse.{{ PrefixName }}.Id!);
         
         //Assert
         var dto = response.{{ PrefixName }};
@@ -68,10 +68,10 @@ public class {{ PrefixName }}{{ SuffixName }}RestIt(ITestOutputHelper testOutput
     {
         //Arrange
         var request = new {{ PrefixName }}Dto { Name = Guid.NewGuid().ToString() };
-        var createResponse = await _client.Create{{ PrefixName }}Async(request);
+        var createResponse = await _client.Create{{ PrefixName }}(request);
     
         //Act
-        var response = await _client.Update{{ PrefixName }}Async(new {{ PrefixName }}Dto() {Id = createResponse.{{ PrefixName }}.Id, Name = "Updated"});
+        var response = await _client.Update{{ PrefixName }}(new {{ PrefixName }}Dto() {Id = createResponse.{{ PrefixName }}.Id, Name = "Updated"});
         
         //Assert
         var dto = response.{{ PrefixName }};
@@ -84,10 +84,10 @@ public class {{ PrefixName }}{{ SuffixName }}RestIt(ITestOutputHelper testOutput
     {
         //Arrange
         var request = new {{ PrefixName }}Dto { Name = Guid.NewGuid().ToString() };
-        var createResponse = await _client.Create{{ PrefixName }}Async(request);
+        var createResponse = await _client.Create{{ PrefixName }}(request);
     
         //Act
-        var response = await _client.Delete{{ PrefixName }}Async(createResponse.{{ PrefixName }}.Id!);
+        var response = await _client.Delete{{ PrefixName }}(createResponse.{{ PrefixName }}.Id!);
         
         //Assert
         Assert.True(response.Deleted);
@@ -101,7 +101,7 @@ public class {{ PrefixName }}{{ SuffixName }}RestIt(ITestOutputHelper testOutput
         //Act
         var exception = await Assert.ThrowsAsync<HttpRequestException>(async () => 
         {
-            await _client.Delete{{ PrefixName }}Async(Guid.NewGuid().ToString());
+            await _client.Delete{{ PrefixName }}(Guid.NewGuid().ToString());
         });
        
         //Assert

@@ -2,8 +2,6 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using OpenTelemetry.Logs;
 using Serilog;
-using Serilog.Formatting.Compact;
-using Serilog.Enrichers.CorrelationId;
 using {{ PrefixName }}{{ SuffixName }}.Server.Services;
 
 namespace {{ PrefixName }}{{ SuffixName }}.Server;
@@ -17,59 +15,19 @@ public class {{ PrefixName }}{{ SuffixName }}Server
     {
         var builder = WebApplication.CreateBuilder(args);
         
+        // Allow ASPNETCORE_URLS environment variable to control binding
+        // This supports both service-port and management-port from docker-compose.yml
+        // Example: ASPNETCORE_URLS=http://+:8080;http://+:8081
+        
         // Configure graceful shutdown
         builder.Host.ConfigureHostOptions(options =>
         {
             options.ShutdownTimeout = TimeSpan.FromSeconds(30);
         });
         
-        builder.Host.UseSerilog((context, loggerConfig) =>
-        {
-            // Check if structured logging is requested
-            var useStructuredLogging = Environment.GetEnvironmentVariable("LOGGING_STRUCTURED") == "true";
-            
-            // Configure base settings from configuration (minimum levels, enrichers, etc.)
-            var config = builder.Configuration;
-            
-            // Apply minimum levels
-            loggerConfig.MinimumLevel.Information();
-            if (config.GetSection("Serilog:MinimumLevel:Override").Exists())
-            {
-                foreach (var overrideConfig in config.GetSection("Serilog:MinimumLevel:Override").GetChildren())
-                {
-                    var levelValue = overrideConfig.Value;
-                    if (Enum.TryParse<Serilog.Events.LogEventLevel>(levelValue, out var level))
-                    {
-                        loggerConfig.MinimumLevel.Override(overrideConfig.Key, level);
-                    }
-                }
-            }
-            
-            // Apply enrichers
-            loggerConfig
-                .Enrich.FromLogContext()
-                .Enrich.WithMachineName()
-                .Enrich.WithThreadId()
-                .Enrich.WithCorrelationId()
-                .Enrich.WithEnvironmentName()
-                .Enrich.WithProperty("Application", config["Application:Name"] ?? "{{ prefix-name }}-{{ suffix-name }}")
-                .Enrich.WithProperty("Version", config["Application:Version"] ?? "1.0.0")
-                .Enrich.WithProperty("Environment", config["Application:Environment"] ?? "Production");
-            
-            // Configure output based on LOGGING_STRUCTURED environment variable
-            if (useStructuredLogging)
-            {
-                // Use structured JSON logging
-                loggerConfig.WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter());
-            }
-            else
-            {
-                // Use line-based logging with a readable format
-                loggerConfig.WriteTo.Console(
-                    outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}"
-                );
-            }
-        });
+        builder.Host.UseSerilog((content, loggerConfig) =>
+            loggerConfig.ReadFrom.Configuration(builder.Configuration)
+        );
         
         builder.Logging.AddOpenTelemetry(logging => logging.AddOtlpExporter());
 
@@ -131,35 +89,53 @@ public class {{ PrefixName }}{{ SuffixName }}Server
 
      public {{ PrefixName }}{{ SuffixName }}Server WithRandomPorts()
     {
-        // Use fixed test ports for integration tests to avoid port discovery issues
-        Environment.SetEnvironmentVariable("GRPC_PORT", "5040");
-        Environment.SetEnvironmentVariable("HTTP_PORT", "5041");
+        // Use fixed test port for integration tests to avoid port discovery issues
+        Environment.SetEnvironmentVariable("HTTP_PORT", "{{ management-port }}");
         return this;
     }
 
-    public string? getGrpcUrl()
+    
+    public string? getHttpUrl()
     {
         if (app == null) return null;
         
         try
         {
             var serverAddresses = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>();
-            // Look for the gRPC endpoint (HTTP/2) - should be the one NOT on management port
-            var grpcAddress = serverAddresses?.Addresses.FirstOrDefault(addr => !addr.Contains("{{ management-port }}"));
-            
-            if (grpcAddress != null)
+            if (serverAddresses?.Addresses == null || !serverAddresses.Addresses.Any())
             {
-                // Replace 0.0.0.0 with localhost for client connections
-                return grpcAddress.Replace("0.0.0.0", "localhost");
+                return "http://localhost:{{ management-port }}";
             }
             
-            // Fallback to configured gRPC port
-            return app.Configuration["Kestrel:Endpoints:Grpc:Url"]?.Replace("0.0.0.0", "localhost") 
-                   ?? "http://localhost:{{ service-port }}";
+            var addresses = serverAddresses.Addresses.ToList();
+            
+            // Look for the HTTP endpoint - it should contain port {{ management-port }} or 1{{ management-port }} (test port)
+            var httpAddress = addresses.FirstOrDefault(addr => addr.Contains("{{ management-port }}") || addr.Contains("1{{ management-port }}"));
+            
+            // If not found by port, use the first address
+            if (httpAddress == null && addresses.Count > 0)
+            {
+                httpAddress = addresses[0];
+            }
+            
+            if (httpAddress != null)
+            {
+                // Replace 0.0.0.0 with localhost for client connections
+                return httpAddress.Replace("0.0.0.0", "localhost").Replace("[::]", "localhost");
+            }
+            
+            // Default fallback
+            var testPort = Environment.GetEnvironmentVariable("HTTP_PORT");
+            if (!string.IsNullOrEmpty(testPort) && testPort != "0")
+            {
+                return $"http://localhost:{testPort}";
+            }
+            
+            return "http://localhost:{{ management-port }}";
         }
         catch
         {
-            return "http://localhost:{{ service-port }}";
+            return "http://localhost:{{ management-port }}";
         }
     }
     

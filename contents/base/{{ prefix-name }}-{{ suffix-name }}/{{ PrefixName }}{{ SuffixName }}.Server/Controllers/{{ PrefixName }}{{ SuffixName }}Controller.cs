@@ -33,7 +33,7 @@ public class {{ PrefixName }}{{ SuffixName }}Controller : ControllerBase
         {
             _logger.LogDebug("REST Create{{ PrefixName }} started for {Name}", request.Name);
             
-            var response = await _service.Create{{ PrefixName }}Async(request);
+            var response = await _service.Create{{ PrefixName }}(request);
             
             stopwatch.Stop();
             _logger.LogInformation("REST Create{{ PrefixName }} completed successfully in {Duration}ms", 
@@ -63,7 +63,7 @@ public class {{ PrefixName }}{{ SuffixName }}Controller : ControllerBase
         {
             _logger.LogDebug("REST Get{{ PrefixName }} started for ID {Id}", id);
             
-            var response = await _service.Get{{ PrefixName }}Async(id);
+            var response = await _service.Get{{ PrefixName }}(id);
             
             stopwatch.Stop();
             _logger.LogInformation("REST Get{{ PrefixName }} completed successfully in {Duration}ms", 
@@ -94,7 +94,7 @@ public class {{ PrefixName }}{{ SuffixName }}Controller : ControllerBase
             _logger.LogDebug("REST Get{{ PrefixName }}s started for page {StartPage}, size {PageSize}", 
                 request.StartPage, request.PageSize);
             
-            var response = await _service.Get{{ PrefixName }}sAsync(request);
+            var response = await _service.Get{{ PrefixName }}s(request);
             
             stopwatch.Stop();
             _logger.LogInformation("REST Get{{ PrefixName }}s completed successfully in {Duration}ms - returned {Count}/{Total} items", 
@@ -126,7 +126,7 @@ public class {{ PrefixName }}{{ SuffixName }}Controller : ControllerBase
         {
             _logger.LogDebug("REST Update{{ PrefixName }} started for ID {Id}", request.Id);
             
-            var response = await _service.Update{{ PrefixName }}Async(request);
+            var response = await _service.Update{{ PrefixName }}(request);
             
             stopwatch.Stop();
             _logger.LogInformation("REST Update{{ PrefixName }} completed successfully in {Duration}ms", 
@@ -156,7 +156,7 @@ public class {{ PrefixName }}{{ SuffixName }}Controller : ControllerBase
         {
             _logger.LogDebug("REST Delete{{ PrefixName }} started for ID {Id}", id);
             
-            var response = await _service.Delete{{ PrefixName }}Async(id);
+            var response = await _service.Delete{{ PrefixName }}(id);
             
             stopwatch.Stop();
             _logger.LogInformation("REST Delete{{ PrefixName }} completed successfully in {Duration}ms - deleted: {Deleted}", 

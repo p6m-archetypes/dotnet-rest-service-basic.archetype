@@ -61,7 +61,7 @@ public class GracefulShutdownService : IHostedService
 
     private async Task PerformCleanupAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting cleanup operations...");
+        _logger.LogInformation("Starting cleanup operations...");{% if persistence != 'None' %}
 
         // Close database connections gracefully
         using var scope = _serviceProvider.CreateScope();
@@ -70,7 +70,7 @@ public class GracefulShutdownService : IHostedService
         {
             await dbContext.DisposeAsync();
             _logger.LogDebug("Database context disposed");
-        }
+        }{% endif %}
 
         // Allow some time for in-flight requests to complete
         await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
