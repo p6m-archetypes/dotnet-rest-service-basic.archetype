@@ -1,449 +1,162 @@
+using Microsoft.Extensions.Logging;
 using {{ PrefixName }}{{ SuffixName }}.API;
 using {{ PrefixName }}{{ SuffixName }}.API.Dtos;
-using {{ PrefixName }}{{ SuffixName }}.API.Logger;
-using {{ PrefixName }}{{ SuffixName }}.Core.Services;
 using {{ PrefixName }}{{ SuffixName }}.Core.Exceptions;
+using {{ PrefixName }}{{ SuffixName }}.Core.Services;
 using {{ PrefixName }}{{ SuffixName }}.Persistence.Entities;
 using {{ PrefixName }}{{ SuffixName }}.Persistence.Models;
 using {{ PrefixName }}{{ SuffixName }}.Persistence.Repositories;
-using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
-using System.Diagnostics; 
 
 namespace {{ PrefixName }}{{ SuffixName }}.Core;
 
 public class {{ PrefixName }}{{ SuffixName }}Core : I{{ PrefixName }}{{ SuffixName }}Service
 {
-    private readonly I{{ PrefixName }}Repository _{{ prefixName }}Repository;
+    private readonly I{{ PrefixName }}Repository _repository;
     private readonly IValidationService _validationService;
     private readonly ILogger<{{ PrefixName }}{{ SuffixName }}Core> _logger;
-       
+
     public {{ PrefixName }}{{ SuffixName }}Core(
-        I{{ PrefixName }}Repository {{ prefixName }}Repository,
+        ISampleRepository repository,
         IValidationService validationService,
-        ILogger<{{ PrefixName }}{{ SuffixName }}Core> logger) 
+        ILogger<{{ PrefixName }}{{ SuffixName }}Core> logger)
     {
-        _{{ prefixName }}Repository = {{ prefixName }}Repository;
+        _repository = repository;
         _validationService = validationService;
         _logger = logger;
     }
+
+    public async Task<Create{{ PrefixName }}Response> Create{{ PrefixName }}({{ PrefixName }}Dto request)
+    {
+        return await Create{{ PrefixName }}Async(request);
+    }
+
     public async Task<Create{{ PrefixName }}Response> Create{{ PrefixName }}Async({{ PrefixName }}Dto request)
     {
-        using var scope = _logger.BeginScope("Operation: {Operation}, Entity: {EntityType}", 
-            "Create{{ PrefixName }}Async", "{{ PrefixName }}");
-        
-        var stopwatch = Stopwatch.StartNew();
-        
-        try
-        {
-            // Validate input
-            _validationService.ValidateCreateRequest(request);
-            
-            _logger.LogDebug("Creating {{ PrefixName }} entity: {Name}", request.Name);
-            
-            try
-            {
-                var {{ prefixName }} = new {{ PrefixName }}Entity
-                {
-                    Name = request.Name.Trim()
-                };
+        _validationService.ValidateCreateRequest(request);
 
-                _{{ prefixName }}Repository.Save({{ prefixName }});
-                await _{{ prefixName }}Repository.SaveChangesAsync();
-                
-                stopwatch.Stop();
-                _logger.LogInformation("Successfully created {{ PrefixName }} entity {Id} in {Duration}ms", 
-                    {{ prefixName }}.Id, stopwatch.ElapsedMilliseconds);
-                
-                return new Create{{ PrefixName }}Response
-                {
-                    {{ PrefixName }} = new {{ PrefixName }}Dto
-                    {
-                        Id = {{ prefixName }}.Id.ToString(),
-                        Name = {{ prefixName }}.Name
-                    }
-                };
-            }
-            catch (DbUpdateException ex)
-            {
-                stopwatch.Stop();
-                _logger.LogError(ex, "Database error creating {{ PrefixName }} entity {Name} after {Duration}ms", 
-                    request.Name, stopwatch.ElapsedMilliseconds);
-                throw new DataAccessException("Create", "Failed to save entity to database.", ex);
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                _logger.LogError(ex, "Unexpected error creating {{ PrefixName }} entity {Name} after {Duration}ms", 
-                    request.Name, stopwatch.ElapsedMilliseconds);
-                throw;
-            }
-        }
-        catch (ValidationException ex)
+        var entity = new {{ PrefixName }}Entity
         {
-            stopwatch.Stop();
-            _logger.LogWarning("Validation failed for Create{{ PrefixName }}Async {Name}: {Error} after {Duration}ms", 
-                request?.Name, ex.Message, stopwatch.ElapsedMilliseconds);
-            throw;
-        }
-        catch (DataAccessException)
+            Name = request.Name
+        };
+
+        _repository.Save(entity);
+        await _repository.SaveChangesAsync();
+
+        _logger.LogInformation("Created sample with ID {Id}", entity.Id);
+
+        return new Create{{ PrefixName }}Response
         {
-            // Re-throw data access exceptions as-is
-            throw;
-        }
-        catch (Exception ex)
-        {
-            stopwatch.Stop();
-            _logger.LogError(ex, "Create{{ PrefixName }}Async failed for {Name} after {Duration}ms", 
-                request?.Name, stopwatch.ElapsedMilliseconds);
-            throw new DataAccessException("Create", "An unexpected error occurred while creating the entity.", ex);
-        }
+            {{ PrefixName }} = MapToDto(entity)
+        };
+    }
+
+    public async Task<Get{{ PrefixName }}sResponse> Get{{ PrefixName }}s(Get{{ PrefixName }}sRequest request)
+    {
+        return await Get{{ PrefixName }}sAsync(request);
     }
 
     public async Task<Get{{ PrefixName }}sResponse> Get{{ PrefixName }}sAsync(Get{{ PrefixName }}sRequest request)
     {
-        using var scope = _logger.BeginScope("Operation: {Operation}, Entity: {EntityType}", 
-            "Get{{ PrefixName }}sAsync", "{{ PrefixName }}");
-        
-        var stopwatch = Stopwatch.StartNew();
-        
-        try
-        {
-            // Validate input
-            _validationService.ValidatePaginationRequest(request);
-            
-            var startPage = Math.Max(1, request.StartPage);
-            var pageSize = Math.Max(Math.Min(request.PageSize, 100), 1);
-            
-            _logger.LogDebug("Fetching {{ PrefixName }} entities: page {StartPage}, size {PageSize}", startPage, pageSize);
-            
-            try
-            {
-                PageRequest pageRequest = new PageRequest
-                {
-                    PageSize = pageSize,
-                    StartPage = startPage
-                };
-                
-                var page = await _{{ prefixName }}Repository.FindAsync(pageRequest);
+        // Normalize pagination parameters
+        var startPage = Math.Max(1, request.StartPage);
+        var pageSize = Math.Min(100, Math.Max(1, request.PageSize));
 
-                var response = new Get{{ PrefixName }}sResponse
-                {
-                    TotalElements = page.TotalElements,
-                    TotalPages = (int)Math.Ceiling((double)page.TotalElements / pageSize)
-                };
-                response.{{ PrefixName }}s.AddRange(page.Items.Select({{ prefixName }} => new {{ PrefixName }}Dto
-                {
-                    Id = {{ prefixName }}.Id.ToString(),
-                    Name = {{ prefixName }}.Name
-                }));
+        var pageRequest = new PageRequest
+        {
+            StartPage = startPage,
+            PageSize = pageSize
+        };
 
-                stopwatch.Stop();
-                _logger.LogInformation("Fetched {Count} {{ PrefixName }} entities (total: {Total}) in {Duration}ms", 
-                    page.Items.Count, page.TotalElements, stopwatch.ElapsedMilliseconds);
-                
-                return response;
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                _logger.LogError(ex, "Database error fetching {{ PrefixName }} entities page {StartPage}, size {PageSize} after {Duration}ms", 
-                    startPage, pageSize, stopwatch.ElapsedMilliseconds);
-                throw new DataAccessException("Read", "Failed to retrieve entities from database.", ex);
-            }
-        }
-        catch (ValidationException ex)
+        var page = await _repository.FindAsync(pageRequest);
+
+        return new Get{{ PrefixName }}sResponse
         {
-            stopwatch.Stop();
-            _logger.LogWarning("Validation failed for Get{{ PrefixName }}sAsync page {StartPage}, size {PageSize}: {Error} after {Duration}ms", 
-                request?.StartPage, request?.PageSize, ex.Message, stopwatch.ElapsedMilliseconds);
-            throw;
-        }
-        catch (DataAccessException)
-        {
-            // Re-throw data access exceptions as-is
-            throw;
-        }
-        catch (Exception ex)
-        {
-            stopwatch.Stop();
-            _logger.LogError(ex, "Get{{ PrefixName }}sAsync failed for page {StartPage}, size {PageSize} after {Duration}ms", 
-                request?.StartPage, request?.PageSize, stopwatch.ElapsedMilliseconds);
-            throw new DataAccessException("Read", "An unexpected error occurred while retrieving entities.", ex);
-        }
+            {{ PrefixName }}s = page.Items.Select(MapToDto).ToList(),
+            TotalElements = page.TotalElements
+        };
+    }
+
+    public async Task<Get{{ PrefixName }}Response> Get{{ PrefixName }}(string id)
+    {
+        return await Get{{ PrefixName }}Async(id);
     }
 
     public async Task<Get{{ PrefixName }}Response> Get{{ PrefixName }}Async(string id)
     {
-        using var scope = _logger.BeginScope("Operation: {Operation}, Entity: {EntityType}, Id: {Id}", 
-            "Get{{ PrefixName }}Async", "{{ PrefixName }}", id);
+        var guidId = _validationService.ValidateAndParseId(id, "id");
         
-        var stopwatch = Stopwatch.StartNew();
-        
-        try
+        var entity = await _repository.FindByIdAsync(guidId);
+        if (entity == null)
         {
-            // Validate and parse ID
-            var entityId = _validationService.ValidateAndParseId(id);
-            
-            _logger.LogDebug("Fetching {{ PrefixName }} entity by ID: {Id}", entityId);
-            
-            try
-            {
-                var {{ prefixName }} = await _{{ prefixName }}Repository.FindByIdAsync(entityId);
-                if ({{ prefixName }} == null)
-                {
-                    stopwatch.Stop();
-                    _logger.LogWarning("{{ PrefixName }} entity not found: {Id} after {Duration}ms", 
-                        entityId, stopwatch.ElapsedMilliseconds);
-                    throw new EntityNotFoundException("{{ PrefixName }}", entityId.ToString());
-                }
+            throw new EntityNotFoundException("{{ PrefixName }}", id);
+        }
 
-                stopwatch.Stop();
-                _logger.LogDebug("Found {{ PrefixName }} entity {Id} ({Name}) in {Duration}ms", 
-                    {{ prefixName }}.Id, {{ prefixName }}.Name, stopwatch.ElapsedMilliseconds);
-                
-                return new Get{{ PrefixName }}Response
-                {
-                    {{ PrefixName }} = new {{ PrefixName }}Dto
-                    {
-                        Id = {{ prefixName }}.Id.ToString(),
-                        Name = {{ prefixName }}.Name
-                    }
-                };
-            }
-            catch (EntityNotFoundException)
-            {
-                // Re-throw entity not found exceptions as-is
-                throw;
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                _logger.LogError(ex, "Database error fetching {{ PrefixName }} entity {Id} after {Duration}ms", 
-                    entityId, stopwatch.ElapsedMilliseconds);
-                throw new DataAccessException("Read", "Failed to retrieve entity from database.", ex);
-            }
-        }
-        catch (ValidationException ex)
+        return new Get{{ PrefixName }}Response
         {
-            stopwatch.Stop();
-            _logger.LogWarning("Validation failed for Get{{ PrefixName }}Async {Id}: {Error} after {Duration}ms", 
-                id, ex.Message, stopwatch.ElapsedMilliseconds);
-            throw;
-        }
-        catch (EntityNotFoundException)
-        {
-            // Re-throw entity not found exceptions as-is
-            throw;
-        }
-        catch (DataAccessException)
-        {
-            // Re-throw data access exceptions as-is
-            throw;
-        }
-        catch (Exception ex)
-        {
-            stopwatch.Stop();
-            _logger.LogError(ex, "Get{{ PrefixName }}Async failed for {Id} after {Duration}ms", 
-                id, stopwatch.ElapsedMilliseconds);
-            throw new DataAccessException("Read", "An unexpected error occurred while retrieving the entity.", ex);
-        }
+            {{ PrefixName }} = MapToDto(entity)
+        };
     }
 
-    public async Task<Update{{ PrefixName }}Response> Update{{ PrefixName }}Async({{ PrefixName }}Dto {{ prefixName }})
+    public async Task<Update{{ PrefixName }}Response> Update{{ PrefixName }}({{ PrefixName }}Dto request)
     {
-        using var scope = _logger.BeginScope("Operation: {Operation}, Entity: {EntityType}, Id: {Id}", 
-            "Update{{ PrefixName }}Async", "{{ PrefixName }}", {{ prefixName }}.Id);
+        return await Update{{ PrefixName }}Async(request);
+    }
+
+    public async Task<Update{{ PrefixName }}Response> Update{{ PrefixName }}Async({{ PrefixName }}Dto request)
+    {
+        _validationService.ValidateUpdateRequest(request);
         
-        var stopwatch = Stopwatch.StartNew();
+        var guidId = _validationService.ValidateAndParseId(request.Id!, "id");
         
-        try
+        var entity = await _repository.FindByIdAsync(guidId);
+        if (entity == null)
         {
-            // Validate input
-            _validationService.ValidateUpdateRequest({{ prefixName }});
-            var entityId = _validationService.ValidateAndParseId({{ prefixName }}.Id);
-            
-            _logger.LogDebug("Updating {{ PrefixName }} entity: {Id} - {Name}", entityId, {{ prefixName }}.Name);
-            
-            try
-            {
-                var entity = await _{{ prefixName }}Repository.FindByIdAsync(entityId);
-                if (entity == null)
-                {
-                    stopwatch.Stop();
-                    _logger.LogWarning("{{ PrefixName }} entity not found for update: {Id} after {Duration}ms", 
-                        entityId, stopwatch.ElapsedMilliseconds);
-                    throw new EntityNotFoundException("{{ PrefixName }}", entityId.ToString());
-                }
-
-                // Check for business rules
-                if (entity.Name == {{ prefixName }}.Name.Trim())
-                {
-                    stopwatch.Stop();
-                    _logger.LogDebug("No changes detected for {{ PrefixName }} entity {Id} after {Duration}ms", 
-                        entityId, stopwatch.ElapsedMilliseconds);
-                    
-                    return new Update{{ PrefixName }}Response
-                    {
-                        {{ PrefixName }} = new {{ PrefixName }}Dto
-                        {
-                            Id = entity.Id.ToString(),
-                            Name = entity.Name
-                        }
-                    };
-                }
-
-                var oldName = entity.Name;
-                entity.Name = {{ prefixName }}.Name.Trim();
-
-                _{{ prefixName }}Repository.Update(entity);
-                await _{{ prefixName }}Repository.SaveChangesAsync();
-
-                stopwatch.Stop();
-                _logger.LogInformation("Updated {{ PrefixName }} entity {Id} from '{OldName}' to '{NewName}' in {Duration}ms", 
-                    entity.Id, oldName, entity.Name, stopwatch.ElapsedMilliseconds);
-
-                return new Update{{ PrefixName }}Response
-                {
-                    {{ PrefixName }} = new {{ PrefixName }}Dto
-                    {
-                        Id = entity.Id.ToString(),
-                        Name = entity.Name
-                    }
-                };
-            }
-            catch (EntityNotFoundException)
-            {
-                // Re-throw entity not found exceptions as-is
-                throw;
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                stopwatch.Stop();
-                _logger.LogWarning(ex, "Concurrency conflict updating {{ PrefixName }} entity {Id} after {Duration}ms", 
-                    entityId, stopwatch.ElapsedMilliseconds);
-                throw new DataAccessException("Update", "The entity was modified by another user. Please refresh and try again.", ex);
-            }
-            catch (DbUpdateException ex)
-            {
-                stopwatch.Stop();
-                _logger.LogError(ex, "Database error updating {{ PrefixName }} entity {Id} after {Duration}ms", 
-                    entityId, stopwatch.ElapsedMilliseconds);
-                throw new DataAccessException("Update", "Failed to update entity in database.", ex);
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                _logger.LogError(ex, "Unexpected error updating {{ PrefixName }} entity {Id} after {Duration}ms", 
-                    entityId, stopwatch.ElapsedMilliseconds);
-                throw;
-            }
+            throw new EntityNotFoundException("{{ PrefixName }}", request.Id!);
         }
-        catch (ValidationException ex)
+
+        entity.Name = request.Name;
+
+        _repository.Update(entity);
+        await _repository.SaveChangesAsync();
+
+        _logger.LogInformation("Updated sample with ID {Id}", entity.Id);
+
+        return new Update{{ PrefixName }}Response
         {
-            stopwatch.Stop();
-            _logger.LogWarning("Validation failed for Update{{ PrefixName }}Async {Id}: {Error} after {Duration}ms", 
-                {{ prefixName }}?.Id, ex.Message, stopwatch.ElapsedMilliseconds);
-            throw;
-        }
-        catch (EntityNotFoundException)
-        {
-            // Re-throw entity not found exceptions as-is
-            throw;
-        }
-        catch (DataAccessException)
-        {
-            // Re-throw data access exceptions as-is
-            throw;
-        }
-        catch (Exception ex)
-        {
-            stopwatch.Stop();
-            _logger.LogError(ex, "Update{{ PrefixName }}Async failed for {Id} after {Duration}ms", 
-                {{ prefixName }}?.Id, stopwatch.ElapsedMilliseconds);
-            throw new DataAccessException("Update", "An unexpected error occurred while updating the entity.", ex);
-        }
+            {{ PrefixName }} = MapToDto(entity)
+        };
+    }
+
+    public async Task<Delete{{ PrefixName }}Response> Delete{{ PrefixName }}(string id)
+    {
+        return await Delete{{ PrefixName }}Async(id);
     }
 
     public async Task<Delete{{ PrefixName }}Response> Delete{{ PrefixName }}Async(string id)
     {
-        using var scope = _logger.BeginScope("Operation: {Operation}, Entity: {EntityType}, Id: {Id}", 
-            "Delete{{ PrefixName }}Async", "{{ PrefixName }}", id);
+        var guidId = _validationService.ValidateAndParseId(id, "id");
         
-        var stopwatch = Stopwatch.StartNew();
-        
-        try
+        var entity = await _repository.FindByIdAsync(guidId);
+        if (entity == null)
         {
-            // Validate and parse ID
-            var entityId = _validationService.ValidateAndParseId(id);
-            
-            _logger.LogDebug("Deleting {{ PrefixName }} entity by ID: {Id}", entityId);
-            
-            try
-            {
-                var {{ prefixName }} = await _{{ prefixName }}Repository.FindByIdAsync(entityId);
-                if ({{ prefixName }} == null)
-                {
-                    stopwatch.Stop();
-                    _logger.LogWarning("{{ PrefixName }} entity not found for deletion: {Id} after {Duration}ms", 
-                        entityId, stopwatch.ElapsedMilliseconds);
-                    throw new EntityNotFoundException("{{ PrefixName }}", entityId.ToString());
-                }
+            _logger.LogWarning("Attempted to delete non-existent sample with ID {Id}", id);
+            return new Delete{{ PrefixName }}Response { Deleted = false };
+        }
 
-                var entityName = {{ prefixName }}.Name; // Capture before deletion
-                _{{ prefixName }}Repository.Delete({{ prefixName }});
-                await _{{ prefixName }}Repository.SaveChangesAsync();
+        _repository.Delete(entity);
+        await _repository.SaveChangesAsync();
 
-                stopwatch.Stop();
-                _logger.LogInformation("Deleted {{ PrefixName }} entity {Id} ('{Name}') in {Duration}ms", 
-                    {{ prefixName }}.Id, entityName, stopwatch.ElapsedMilliseconds);
+        _logger.LogInformation("Deleted sample with ID {Id}", entity.Id);
 
-                return new Delete{{ PrefixName }}Response { Deleted = true };
-            }
-            catch (EntityNotFoundException)
-            {
-                // Re-throw entity not found exceptions as-is
-                throw;
-            }
-            catch (DbUpdateException ex)
-            {
-                stopwatch.Stop();
-                _logger.LogError(ex, "Database error deleting {{ PrefixName }} entity {Id} after {Duration}ms", 
-                    entityId, stopwatch.ElapsedMilliseconds);
-                throw new DataAccessException("Delete", "Failed to delete entity from database.", ex);
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                _logger.LogError(ex, "Unexpected error deleting {{ PrefixName }} entity {Id} after {Duration}ms", 
-                    entityId, stopwatch.ElapsedMilliseconds);
-                throw;
-            }
-        }
-        catch (ValidationException ex)
-        {
-            stopwatch.Stop();
-            _logger.LogWarning("Validation failed for Delete{{ PrefixName }}Async {Id}: {Error} after {Duration}ms", 
-                id, ex.Message, stopwatch.ElapsedMilliseconds);
-            throw;
-        }
-        catch (EntityNotFoundException)
-        {
-            // Re-throw entity not found exceptions as-is
-            throw;
-        }
-        catch (DataAccessException)
-        {
-            // Re-throw data access exceptions as-is
-            throw;
-        }
-        catch (Exception ex)
-        {
-            stopwatch.Stop();
-            _logger.LogError(ex, "Delete{{ PrefixName }}Async failed for {Id} after {Duration}ms", 
-                id, stopwatch.ElapsedMilliseconds);
-            throw new DataAccessException("Delete", "An unexpected error occurred while deleting the entity.", ex);
-        }
+        return new Delete{{ PrefixName }}Response { Deleted = true };
     }
-    
+
+    private static {{ PrefixName }}Dto MapToDto({{ PrefixName }}Entity entity)
+    {
+        return new {{ PrefixName }}Dto
+        {
+            Id = entity.Id.ToString(),
+            Name = entity.Name ?? string.Empty
+        };
+    }
 }
