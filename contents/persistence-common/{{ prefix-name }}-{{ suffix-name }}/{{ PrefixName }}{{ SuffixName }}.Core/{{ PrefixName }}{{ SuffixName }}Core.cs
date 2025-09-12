@@ -16,7 +16,7 @@ public class {{ PrefixName }}{{ SuffixName }}Core : I{{ PrefixName }}{{ SuffixNa
     private readonly ILogger<{{ PrefixName }}{{ SuffixName }}Core> _logger;
 
     public {{ PrefixName }}{{ SuffixName }}Core(
-        ISampleRepository repository,
+        I{{ PrefixName }}Repository repository,
         IValidationService validationService,
         ILogger<{{ PrefixName }}{{ SuffixName }}Core> logger)
     {

@@ -70,7 +70,7 @@ public class EphemeralDatabaseService : IDisposable
     }
     
     /// <summary>
-    /// Stops the PostgreSQL container
+    /// Stops the database container
     /// </summary>
     public async Task StopDatabaseAsync(CancellationToken cancellationToken = default)
     {

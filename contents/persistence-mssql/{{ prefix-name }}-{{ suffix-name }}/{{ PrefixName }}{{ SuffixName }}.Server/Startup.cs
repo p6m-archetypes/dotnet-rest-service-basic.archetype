@@ -123,7 +123,7 @@ public class Startup
         // Configure database with optimized connection pooling
         if (isEphemeral)
         {
-            // Use Testcontainers PostgreSQL for ephemeral environment
+            // Use Testcontainers SQL Server for ephemeral environment
             services.AddDbContext<AppDbContext>((serviceProvider, options) =>
             {
                 var ephemeralDbService = serviceProvider.GetRequiredService<EphemeralDatabaseService>();
@@ -134,14 +134,14 @@ public class Startup
                     throw new InvalidOperationException("Ephemeral database connection string is not available. Ensure the EphemeralDatabaseService has been started.");
                 }
                 
-                options.UseNpgsql(connectionString, npgsqlOptions =>
+                options.UseSqlServer(connectionString, sqlOptions =>
                 {
-                    npgsqlOptions.EnableRetryOnFailure(
+                    sqlOptions.EnableRetryOnFailure(
                         maxRetryCount: 3,
                         maxRetryDelay: TimeSpan.FromSeconds(5),
-                        errorCodesToAdd: null);
+                        errorNumbersToAdd: null);
                     
-                    npgsqlOptions.CommandTimeout(
+                    sqlOptions.CommandTimeout(
                         int.Parse(Configuration["Database:CommandTimeout"] ?? "30"));
                 });
                 
@@ -153,18 +153,18 @@ public class Startup
         }
         else
         {
-            // Use regular PostgreSQL connection for production
+            // Use regular SQL Server connection for production
             services.AddDbContext<AppDbContext>(options =>
             {
                 var connectionString = Configuration.GetConnectionString("DefaultConnection");
-                options.UseNpgsql(connectionString, npgsqlOptions =>
+                options.UseSqlServer(connectionString, sqlOptions =>
                 {
-                    npgsqlOptions.EnableRetryOnFailure(
+                    sqlOptions.EnableRetryOnFailure(
                         maxRetryCount: 3,
                         maxRetryDelay: TimeSpan.FromSeconds(5),
-                        errorCodesToAdd: null);
+                        errorNumbersToAdd: null);
                     
-                    npgsqlOptions.CommandTimeout(
+                    sqlOptions.CommandTimeout(
                         int.Parse(Configuration["Database:CommandTimeout"] ?? "30"));
                 });
 
@@ -179,7 +179,7 @@ public class Startup
                 options.EnableServiceProviderCaching();
             });
             services.AddScoped<I{{ PrefixName }}Repository, {{ PrefixName }}Repository>();
-        }        
+        } 
         
         // Register health check services
         services.AddScoped<DatabaseHealthCheck>();
