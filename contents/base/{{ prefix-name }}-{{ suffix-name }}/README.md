@@ -2,7 +2,7 @@
 
 **// TODO:** Add description of your project's business function.
 
-Generated from the [.NET gRPC Service Archetype](https://github.com/p6m-archetypes/{{ prefix-name }}-{{ suffix-name }}.archetype).
+Generated from the [.NET REST Service Archetype](https://github.com/p6m-archetypes/dotnet-rest-service-basic.archetype.archetype).
 
 ## Table of Contents
 
@@ -59,8 +59,8 @@ Generated from the [.NET gRPC Service Archetype](https://github.com/p6m-archetyp
 
 ## Project Structure / Modules
 
-| Directory                                                                          | Description                                                                                |
-| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Directory                                                                                                        | Description                                                                                |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | [{{ PrefixName }}{{ SuffixName }}.API]({{ PrefixName }}{{ SuffixName }}.API/README.md)                           | Service Interfaces with a gRPC model. gRPC/Protobuf spec.                                  |
 | [{{ PrefixName }}{{ SuffixName }}.Client]({{ PrefixName }}{{ SuffixName }}.Client/README.md)                     | gRPC Client. Implements the API.                                                           |
 | [{{ PrefixName }}{{ SuffixName }}.Core]({{ PrefixName }}{{ SuffixName }}.Core/README.md)                         | Business Logic. Abstracts Persistence, defines Transaction Boundaries. Implements the API. |
