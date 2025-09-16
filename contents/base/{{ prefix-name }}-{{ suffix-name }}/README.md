@@ -1,8 +1,8 @@
-# {{ PrefixName }} {{ SuffixName }}
+# .NET REST Basic Archetype
 
 **// TODO:** Add description of your project's business function.
 
-Generated from the [.NET REST Service Archetype](https://github.com/p6m-archetypes/dotnet-rest-service-basic.archetype.archetype).
+Generated from the [.NET REST Service Archetype](https://github.com/p6m-archetypes/dotnet-rest-service-basic.archetype).
 
 ## Table of Contents
 
