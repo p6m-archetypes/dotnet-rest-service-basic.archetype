@@ -25,23 +25,23 @@ context += render(Archetype("project-prompts"), ANSWERS + #{
 }, render_settings);
 
 context += prompt("Persistence:", "persistence", #{
-  type: Select([
-    "PostgreSQL",
-    "MySQL",
-    "MSSQL",
-    "None",
-  ]),
-  defaults_with: "PostgreSQL",
+    type: Select([
+        "PostgreSQL",
+        "MySQL",
+        "MSSQL",
+        "None",
+    ]),
+    defaults_with: "PostgreSQL",
 });
 
 context += prompt("Artifactory Host:", "artifactory-host", #{
-  defaults_with: "p6m.jfrog.io",
+    defaults_with: "p6m.jfrog.io",
 });
 
 context += prompt("Service Port:", "service-port", #{
-  type: Int,
-  defaults_with: 5030,
-  help: "REST service port for the application",
+    type: Int,
+    defaults_with: 5030,
+    help: "REST service port for the application",
 });
 
 context += set("management-port", context["service-port"] + 1);
@@ -66,47 +66,47 @@ if switch_enabled("debug-context") {
 render(Directory("contents/base"), context);
 render(Directory("contents/persistence-" + to_lower(context["persistence"])), context);
 if context["persistence"] != "None" {
-  render(Directory("contents/persistence-common"), context);
+    render(Directory("contents/persistence-common"), context);
 }
 
 render(Archetype("manifests"), context["project-name"], context + #{
-  "language": ".NET",
-  "protocol": "REST",
+    "language": ".NET",
+    "protocol": "REST",
 });
 
 //
 // Publishing
 //
 if switch_enabled("zip") {
-  zip(context["project-name"], render("{{ project-name }}.zip", context));
+    zip(context["project-name"], render("{{ project-name }}.zip", context));
 }
 if switch_enabled("tarball") {
-  tar_gz(context["project-name"], render("{{ project-name }}.tar.gz", context));
+    tar_gz(context["project-name"], render("{{ project-name }}.tar.gz", context));
 }
 
 if switch_enabled("git-init") || switch_enabled("git-publish") {
-  git_init(context["project-name"], "main");
-  git_add_all(context["project-name"]);
-  git_commit(context["project-name"], "initial commit");
-  git_remote_add(context["project-name"], "origin", render("https://github.com/{{ org-solution-name }}/{{ project-name }}.git", context));
+    git_init(context["project-name"], "main");
+    git_add_all(context["project-name"]);
+    git_commit(context["project-name"], "initial commit");
+    git_remote_add(context["project-name"], "origin", render("https://github.com/{{ org-solution-name }}/{{ project-name }}.git", context));
 
-  if switch_enabled("git-publish") {
-    gh_repo_create(render("{{ org-solution-name }}/{{ project-name }}", context), Private);
-    git_push(context["project-name"], "origin", "main");
-  }
+    if switch_enabled("git-publish") {
+        gh_repo_create(render("{{ org-solution-name }}/{{ project-name }}", context), Private);
+        git_push(context["project-name"], "origin", "main");
+    }
 } else {
-  display();
+    display();
 
-  log(Info, "Copy and paste the following commands to publish your project:");
+    log(Info, "Copy and paste the following commands to publish your project:");
 
-  display();
+    display();
 
-  display(render("cd {{ project-name }}", context));
-  display("git init -b main");
-  display(render("gh repo create {{ org-solution-name }}/{{ project-name }} --private --source=. --remote=origin", context));
-  display("git add .");
-  display("git commit -m 'initial commit'");
-  display("git push -u origin HEAD");
+    display(render("cd {{ project-name }}", context));
+    display("git init -b main");
+    display(render("gh repo create {{ org-solution-name }}/{{ project-name }} --private --source=. --remote=origin", context));
+    display("git add .");
+    display("git commit -m 'initial commit'");
+    display("git push -u origin HEAD");
 }
 
 context
