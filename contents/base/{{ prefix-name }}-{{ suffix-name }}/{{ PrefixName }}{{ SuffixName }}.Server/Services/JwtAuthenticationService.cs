@@ -26,6 +26,24 @@ public class JwtAuthenticationService : IAuthenticationService
         _logger = logger;
         _options = new JwtAuthenticationOptions();
         configuration.GetSection("Authentication:Jwt").Bind(_options);
+
+        // Use defaults if not configured
+        if (string.IsNullOrEmpty(_options.SecretKey))
+        {
+          _options.SecretKey = configuration["Authentication:Jwt:SecretKey"] ?? "ThisIsAVerySecretKeyForDevelopmentOnly123456789";
+        }
+        if (string.IsNullOrEmpty(_options.Issuer))
+        {
+          _options.Issuer = configuration["Authentication:Jwt:Issuer"] ?? "{{ PrefixName }}{{ SuffixName }}";
+        }
+        if (string.IsNullOrEmpty(_options.Audience))
+        {
+          _options.Audience = configuration["Authentication:Jwt:Audience"] ?? "{{ PrefixName }}{{ SuffixName }}API";
+        }
+        if (_options.ExpirationMinutes == 0)
+        {
+          _options.ExpirationMinutes = 60;
+        }
         
         _signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SecretKey));
     }

@@ -150,6 +150,7 @@ public class Startup
                 options.EnableSensitiveDataLogging(Configuration["ASPNETCORE_ENVIRONMENT"] == "Development");
                 options.EnableServiceProviderCaching();
             });
+            services.AddScoped<I{{ PrefixName }}Repository, {{ PrefixName }}Repository>();
         }
         else
         {

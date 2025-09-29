@@ -57,6 +57,9 @@ public class {{ PrefixName }}{{ SuffixName }}Core : I{{ PrefixName }}{{ SuffixNa
 
     public async Task<Get{{ PrefixName }}sResponse> Get{{ PrefixName }}sAsync(Get{{ PrefixName }}sRequest request)
     {
+        // Validate pagination request first
+        _validationService.ValidatePaginationRequest(request);
+
         // Normalize pagination parameters
         var startPage = Math.Max(1, request.StartPage);
         var pageSize = Math.Min(100, Math.Max(1, request.PageSize));
@@ -88,7 +91,7 @@ public class {{ PrefixName }}{{ SuffixName }}Core : I{{ PrefixName }}{{ SuffixNa
         var entity = await _repository.FindByIdAsync(guidId);
         if (entity == null)
         {
-            throw new EntityNotFoundException("{{ PrefixName }}", id);
+            throw new EntityNotFoundException("Example", guidId.ToString());
         }
 
         return new Get{{ PrefixName }}Response
@@ -111,7 +114,7 @@ public class {{ PrefixName }}{{ SuffixName }}Core : I{{ PrefixName }}{{ SuffixNa
         var entity = await _repository.FindByIdAsync(guidId);
         if (entity == null)
         {
-            throw new EntityNotFoundException("{{ PrefixName }}", request.Id!);
+            throw new EntityNotFoundException("Example", guidId.ToString());
         }
 
         entity.Name = request.Name;
@@ -139,8 +142,7 @@ public class {{ PrefixName }}{{ SuffixName }}Core : I{{ PrefixName }}{{ SuffixNa
         var entity = await _repository.FindByIdAsync(guidId);
         if (entity == null)
         {
-            _logger.LogWarning("Attempted to delete non-existent sample with ID {Id}", id);
-            return new Delete{{ PrefixName }}Response { Deleted = false };
+            throw new EntityNotFoundException("Example", guidId.ToString());
         }
 
         _repository.Delete(entity);
