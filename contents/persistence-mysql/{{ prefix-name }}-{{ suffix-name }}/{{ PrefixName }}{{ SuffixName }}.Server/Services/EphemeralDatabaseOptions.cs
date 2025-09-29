@@ -8,9 +8,9 @@ public class EphemeralDatabaseOptions
     public const string SectionName = "Ephemeral:Database";
     
     /// <summary>
-    /// Docker image for PostgreSQL container
+    /// Docker image for MySQL container
     /// </summary>
-    public string Image { get; set; } = "postgres:15-alpine";
+    public string Image { get; set; } = "mysql:8.0";
     
     /// <summary>
     /// Database name to create
@@ -18,12 +18,12 @@ public class EphemeralDatabaseOptions
     public string DatabaseName { get; set; } = "{{ prefix_name }}_{{ suffix_name }}";
     
     /// <summary>
-    /// PostgreSQL username
+    /// MySQL username
     /// </summary>
-    public string Username { get; set; } = "postgres";
+    public string Username { get; set; } = "root";
     
     /// <summary>
-    /// PostgreSQL password
+    /// MySQL password
     /// </summary>
     public string Password { get; set; } = "testpassword";
     
