@@ -102,8 +102,8 @@ public class Startup
         // Add graceful shutdown service
         services.AddHostedService<Services.GracefulShutdownService>();
 
-        services.AddScoped<{{ PrefixName }}{{ SuffixName }}Core>();
-        services.AddScoped<IValidationService, ValidationService>();
+        services.AddSingleton<{{ PrefixName }}{{ SuffixName }}Core>();
+        services.AddSingleton<IValidationService, ValidationService>();
         
         
         // Register health check services
