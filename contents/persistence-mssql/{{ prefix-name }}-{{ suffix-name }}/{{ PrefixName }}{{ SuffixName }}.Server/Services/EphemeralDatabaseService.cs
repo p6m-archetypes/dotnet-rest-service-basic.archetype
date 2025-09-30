@@ -49,17 +49,24 @@ public class EphemeralDatabaseService : IDisposable
             // Wait for the database to be ready to accept connections
             await WaitForDatabaseReadyAsync(cancellationToken);
             
-            var connectionString = _container.GetConnectionString();
+            var baseConnectionString = _container.GetConnectionString();
             var host = _container.Hostname;
             var port = _container.GetMappedPublicPort(MsSqlBuilder.MsSqlPort);
             var database = _options.DatabaseName;
             var username = _options.Username;
             var password = _options.Password;
+
+            // Modify connection string to include the database name
+            var connectionStringBuilder = new SqlConnectionStringBuilder(baseConnectionString)
+            {
+                InitialCatalog = database
+            };
+            var connectionString = connectionStringBuilder.ConnectionString;
             
             _logger.LogInformation(
                 "SQL Server container started successfully. Host: {Host}, Port: {Port}, Database: {Database}",
                 host, port, database);
-            
+
             return connectionString;
         }
         catch (Exception ex)
@@ -106,7 +113,17 @@ public class EphemeralDatabaseService : IDisposable
     /// </summary>
     public string? GetConnectionString()
     {
-        return _container?.GetConnectionString();
+        if (_container == null)
+        {
+            return null;
+        }
+
+        var baseConnectionString = _container.GetConnectionString();
+        var connectionStringBuilder = new SqlConnectionStringBuilder(baseConnectionString)
+        {
+            InitialCatalog = _options.DatabaseName
+        };
+        return connectionStringBuilder.ConnectionString;
     }
     
     /// <summary>

@@ -178,8 +178,9 @@ public class Startup
                 // Configure connection pooling
                 options.EnableServiceProviderCaching();
             });
-            services.AddScoped<I{{ PrefixName }}Repository, {{ PrefixName }}Repository>();
         } 
+
+        services.AddScoped<I{{ PrefixName }}Repository, {{ PrefixName }}Repository>();
         
         // Register health check services
         services.AddScoped<DatabaseHealthCheck>();
