@@ -1,8 +1,8 @@
 ---
-description: ".NET REST Service, Namespaced, Modular Microservice"
-authors: ["Jimmie Fulton <jimmie@ybor.ai>"]
+description: ".NET REST Service, Modular"
+authors: ["Ybor Technology"]
 languages: ["C#"]
-frameworks: [".NET", "Entities Framework", "REST"]
+frameworks: [".NET", "Entity Framework", "REST"]
 tags: ["Modular", "Service", "Microservice", "REST"]
 
 requires:

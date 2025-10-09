@@ -42,7 +42,7 @@ public class {{ PrefixName }}{{ SuffixName }}Core : I{{ PrefixName }}{{ SuffixNa
         _repository.Save(entity);
         await _repository.SaveChangesAsync();
 
-        _logger.LogInformation("Created sample with ID {Id}", entity.Id);
+        _logger.LogInformation("Created {{ PrefixName }} with ID {Id}", entity.Id);
 
         return new Create{{ PrefixName }}Response
         {
@@ -122,7 +122,7 @@ public class {{ PrefixName }}{{ SuffixName }}Core : I{{ PrefixName }}{{ SuffixNa
         _repository.Update(entity);
         await _repository.SaveChangesAsync();
 
-        _logger.LogInformation("Updated sample with ID {Id}", entity.Id);
+        _logger.LogInformation("Updated {{ PrefixName }} with ID {Id}", entity.Id);
 
         return new Update{{ PrefixName }}Response
         {
