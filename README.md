@@ -153,10 +153,32 @@ For complete property relationships, see [archetype.yaml](./archetype.yaml).
 
 This archetype is ideal for:
 
-1. **Microservices**: Building HTTP-based microservices with standard REST patterns
-2. **CRUD Applications**: Services requiring Create, Read, Update, Delete operations over HTTP
-3. **Public APIs**: External-facing APIs with OpenAPI documentation for easy integration
-4. **Internal Services**: Backend services for web and mobile applications
+1. **Public-Facing APIs**: External APIs requiring wide compatibility
+   - OpenAPI/Swagger documentation for easy integration
+   - HTTP/JSON standard supported by all programming languages
+   - Third-party integrations and partner APIs
+   - Can be consumed directly by frontend applications
+
+2. **API Gateways & Aggregation**: Services that federate internal microservices
+   - Aggregate multiple gRPC or REST services behind a unified REST API
+   - Backend-for-Frontend (BFF) pattern for web and mobile apps
+   - Transform internal service responses into client-optimized formats
+   - Handle authentication, rate limiting, and CORS for frontend clients
+
+3. **CRUD Applications**: Standard Create, Read, Update, Delete operations
+   - Resource-based REST endpoints with HTTP verbs
+   - Simple data models with straightforward persistence
+   - Admin interfaces and internal tools
+
+4. **Microservices Architecture**: Either standalone or as part of a larger ecosystem
+   - **Standalone**: Complete service with direct database access
+   - **Gateway**: Federate internal gRPC/GraphQL services for HTTP clients
+   - **Hybrid**: Mix of direct database operations and service delegation
+
+**Architectural Note**: REST services offer flexibility:
+- Consume gRPC services internally, expose REST externally (gateway pattern)
+- Stand-alone services with direct database access (monolithic microservice)
+- Pure HTTP architecture where all services communicate via REST
 
 ## 📚 What's Inside
 
