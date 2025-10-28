@@ -30,8 +30,8 @@ jobs:
       - name: Login to .NET Repository
         uses: p6m-actions/dotnet-repository-login@v1
         with:
-          repository: {{ org-name }}-{{ solution-name }}-nuget
-          repository-url: https://${{'{'}}{ vars.ARTIFACTORY_HOSTNAME }}/artifactory/api/nuget/{{ org-name }}-{{ solution-name }}-nuget
+          repository: ${{'{'}}{ vars.ARTIFACTORY_PROJECT }}-nuget
+          repository-url: https://${{'{'}}{ vars.ARTIFACTORY_HOSTNAME }}/artifactory/api/nuget/${{'{'}}{ vars.ARTIFACTORY_PROJECT }}-nuget
           username: ${{'{'}}{ secrets.ARTIFACTORY_USERNAME }}
           password: ${{'{'}}{ secrets.ARTIFACTORY_IDENTITY_TOKEN }}
 
@@ -65,7 +65,7 @@ jobs:
         with:
           image-name: {{ prefix-name }}-{{ suffix-name }}-server
           image-tag: ${{'{'}}{ steps.cut-tag.outputs.version }}
-          registry: ${{'{'}}{ vars.ARTIFACTORY_HOSTNAME }}/{{ org-name }}-{{ solution-name }}-docker-local/applications
+          registry: ${{'{'}}{ vars.ARTIFACTORY_HOSTNAME }}/${{'{'}}{ vars.ARTIFACTORY_PROJECT }}-docker-local/applications
           push: true
           skip-setup: true
           builder-name: ${{'{'}}{ steps.buildx.outputs.name }}
@@ -76,9 +76,25 @@ jobs:
         uses: p6m-actions/dotnet-repository-publish@v1
         with:
           repositories: |
-            {{ org-name }}-{{ solution-name }}-nuget
+            ${{'{'}}{ vars.ARTIFACTORY_PROJECT }}-nuget
         env:
           NUGET_API_KEY: "${{'{'}}{ secrets.ARTIFACTORY_USERNAME }}:${{'{'}}{ secrets.ARTIFACTORY_IDENTITY_TOKEN }}"
+
+      - name: Make Artifacts
+        run: |
+          echo '${{'{'}}{ steps.docker-publish.outputs.image-digest }}' | tee digest.txt
+
+      - uses: ncipollo/release-action@v1
+        with:
+          name: Version ${{'{'}}{ steps.cut-tag.outputs.version }}
+          tag: ${{'{'}}{ steps.cut-tag.outputs.tag }}
+          makeLatest: true
+          artifacts: "digest.txt"
+          removeArtifacts: true
+          generateReleaseNotes: true
+          body: |
+            Application version: `${{'{'}}{ steps.cut-tag.outputs.version }}`
+            Docker image digest: `${{'{'}}{ steps.docker-publish.outputs.image-digest }}`
 
       - name: Update Application Manifest
         uses: p6m-actions/platform-application-manifest-dispatch@v1
