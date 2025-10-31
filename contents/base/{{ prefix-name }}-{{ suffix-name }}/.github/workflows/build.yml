@@ -29,6 +29,7 @@ jobs:
         id: cut-patch
         uses: p6m-actions/dotnet-cut-tag@v1
         with:
+          skip-push: ${{'{'}}{ github.ref_name != 'main' }}
           version-level: patch
 
       - name: Build .NET Application
@@ -36,7 +37,6 @@ jobs:
         with:
           run-tests: true
           test-filter: "Category!=Integration"
-          version: ${{'{'}}{ steps.cut-patch.outputs.version }}
 
       - name: Login to Docker Repository
         uses: p6m-actions/docker-repository-login@v1
@@ -73,10 +73,12 @@ jobs:
           NUGET_API_KEY: "${{'{'}}{ secrets.ARTIFACTORY_USERNAME }}:${{'{'}}{ secrets.ARTIFACTORY_IDENTITY_TOKEN }}"
         
       - name: Make Artifacts
+        if: github.ref_name == 'main'
         run: |
           echo '${{'{'}}{ steps.docker-publish.outputs.image-digest }}' | tee digest.txt
 
       - uses: ncipollo/release-action@v1
+        if: github.ref_name == 'main'
         with:
           name: Version ${{'{'}}{ steps.cut-patch.outputs.version }}
           tag: ${{'{'}}{ steps.cut-patch.outputs.tag }}

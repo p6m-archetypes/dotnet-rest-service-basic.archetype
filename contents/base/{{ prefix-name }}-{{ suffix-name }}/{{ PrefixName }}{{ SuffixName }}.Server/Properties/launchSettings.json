@@ -7,7 +7,8 @@
       "launchBrowser": false,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "Kestrel__Endpoints__Http__Url": "http://localhost:{{ management-port }}"
+        "Kestrel__Endpoints__Server__Url": "http://localhost:{{ service-port }}",
+        "Kestrel__Endpoints__Management__Url": "http://localhost:{{ management-port }}"
       }
     },
     "local_external_db": {
@@ -16,7 +17,8 @@
       "launchBrowser": false,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "Kestrel__Endpoints__Http__Url": "http://localhost:{{ management-port }}"
+        "Kestrel__Endpoints__Server__Url": "http://localhost:{{ service-port }}",
+        "Kestrel__Endpoints__Management__Url": "http://localhost:{{ management-port }}"
       }
     }
   }

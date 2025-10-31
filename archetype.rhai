@@ -40,7 +40,7 @@ context += prompt("Artifactory Host:", "artifactory-host", #{
 
 context += prompt("Service Port:", "service-port", #{
     type: Int,
-    defaults_with: 5030,
+    defaults_with: 8080,
     help: "REST service port for the application",
 });
 

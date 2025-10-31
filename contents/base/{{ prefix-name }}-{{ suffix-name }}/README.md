@@ -30,10 +30,10 @@ Generated from the [.NET REST Service Archetype](https://github.com/p6m-archetyp
 
 ### 1. .NET SDK
 
-- **Version:** 9.0 or higher
+- **Version:** 8.0 or higher
 - **Verify:**
   ```bash
-  dotnet --version # → 9.x.x or greater
+  dotnet --version # → 8.x.x or greater
   ```
 - See https://developer.p6m.dev/docs/workstation/dotnet for instructions
 

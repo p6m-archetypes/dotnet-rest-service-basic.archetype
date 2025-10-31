@@ -275,7 +275,7 @@ public class Startup
         bool dropCreateDatabase = bool.Parse(Configuration["Database:DropCreateDatabase"] ?? "false");
         
         // Handle database setup based on environment
-        if (enableMigrations && isEphemeral)
+        if (enableMigrations)
         {
             using (var scope = app.Services.CreateScope())
             {
@@ -283,34 +283,10 @@ public class Startup
                 var context = servicesProvider.GetRequiredService<AppDbContext>();
                 var logger = servicesProvider.GetRequiredService<ILogger<Startup>>();
                 
-                if (isEphemeral)
-                {
-                    // For ephemeral mode, ensure clean database state
-                    logger.LogInformation("Setting up ephemeral database schema...");
-                    
-                    try
-                    {
-                        if (dropCreateDatabase)
-                        {
-                            context.Database.EnsureDeleted();
-                        }
-                        
-                        var created = context.Database.EnsureCreated();
-                        logger.LogInformation("Database schema created successfully");
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Error during database schema creation");
-                        throw;
-                    }
-                }
-                else
-                {
-                    // For production/development, use migrations
-                    logger.LogInformation("Running database migrations");
-                    context.Database.Migrate();
-                    logger.LogInformation("Database migrations completed");
-                }
+                // For production/development, use migrations
+                logger.LogInformation("Running database migrations");
+                context.Database.Migrate();
+                logger.LogInformation("Database migrations completed");
             }
         }
         else
@@ -336,7 +312,7 @@ public class Startup
             app.UseSwaggerUI(c => 
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "{{ PrefixName }}{{ SuffixName }} API V1");
-                c.RoutePrefix = "swagger";
+                c.RoutePrefix = "";
             });
         }
         
@@ -345,8 +321,8 @@ public class Startup
         app.UseAuthentication();
         app.UseAuthorization();
         
-        app.MapControllers();
-        app.MapGet("/", () => "{{ PrefixName }}{{ SuffixName }} REST API Service");
+        app.MapControllers()
+            .AllowAnonymous();
 
         app.MapPrometheusScrapingEndpoint("/metrics");
         
