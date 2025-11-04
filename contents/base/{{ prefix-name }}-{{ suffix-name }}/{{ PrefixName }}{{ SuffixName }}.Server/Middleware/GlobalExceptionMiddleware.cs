@@ -36,6 +36,7 @@ public class GlobalExceptionMiddleware
         {
             EntityNotFoundException notFound => (HttpStatusCode.NotFound, notFound.Message, "NotFound"),
             ValidationException validation => (HttpStatusCode.BadRequest, validation.Message, "InvalidArgument"),
+            BusinessRuleException businessRule => (HttpStatusCode.BadRequest, businessRule.Message, "BusinessRuleViolation"),
             InvalidOperationException invalid => (HttpStatusCode.BadRequest, invalid.Message, "InvalidOperation"),
             UnauthorizedAccessException unauthorized => (HttpStatusCode.Unauthorized, "Authentication required", "Unauthenticated"),
             _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred", "Internal")
