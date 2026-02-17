@@ -5,3 +5,12 @@ metadata:
 spec:
   config: 
     ASPNETCORE_ENVIRONMENT: "Development"
+  networking:
+    ingress:
+      enabled: true
+      oidc: true
+    inbound:
+      services:
+        - name: {{ prefix-name }}-{{ suffix-name }}
+          namespace: {{ prefix-name }}-{{ suffix-name }}
+          port: 8080
