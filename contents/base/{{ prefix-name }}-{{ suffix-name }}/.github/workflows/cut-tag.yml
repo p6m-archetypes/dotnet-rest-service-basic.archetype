@@ -30,10 +30,10 @@ jobs:
       - name: Login to .NET Repository
         uses: p6m-actions/dotnet-repository-login@v1
         with:
-          repository: ${{'{'}}{ vars.ARTIFACTORY_PROJECT }}-nuget
-          repository-url: https://${{'{'}}{ vars.ARTIFACTORY_HOSTNAME }}/artifactory/api/nuget/${{'{'}}{ vars.ARTIFACTORY_PROJECT }}-nuget
-          username: ${{'{'}}{ secrets.ARTIFACTORY_USERNAME }}
-          password: ${{'{'}}{ secrets.ARTIFACTORY_IDENTITY_TOKEN }}
+          repository: ${{'{'}}{ vars.P6M_ARTIFACTORY_PROJECT }}-nuget
+          repository-url: https://${{'{'}}{ vars.P6M_ARTIFACTORY_HOSTNAME }}/artifactory/api/nuget/${{'{'}}{ vars.P6M_ARTIFACTORY_PROJECT }}-nuget
+          username: ${{'{'}}{ secrets.P6M_ARTIFACTORY_USERNAME }}
+          password: ${{'{'}}{ secrets.P6M_ARTIFACTORY_IDENTITY_TOKEN }}
 
       - name: Cut Tag
         id: cut-tag
@@ -51,9 +51,9 @@ jobs:
       - name: Login to Docker Repository
         uses: p6m-actions/docker-repository-login@v1
         with:
-          registry: ${{'{'}}{ vars.ARTIFACTORY_HOSTNAME }}
-          username: ${{'{'}}{ secrets.ARTIFACTORY_USERNAME }}
-          password: ${{'{'}}{ secrets.ARTIFACTORY_IDENTITY_TOKEN }}
+          registry: ${{'{'}}{ vars.P6M_ARTIFACTORY_HOSTNAME }}
+          username: ${{'{'}}{ secrets.P6M_ARTIFACTORY_USERNAME }}
+          password: ${{'{'}}{ secrets.P6M_ARTIFACTORY_IDENTITY_TOKEN }}
 
       - name: Set up Docker Buildx
         id: buildx
@@ -65,20 +65,20 @@ jobs:
         with:
           image-name: {{ prefix-name }}-{{ suffix-name }}-server
           image-tag: ${{'{'}}{ steps.cut-tag.outputs.version }}
-          registry: ${{'{'}}{ vars.ARTIFACTORY_HOSTNAME }}/${{'{'}}{ vars.ARTIFACTORY_PROJECT }}-docker-local/applications
+          registry: ${{'{'}}{ vars.P6M_ARTIFACTORY_HOSTNAME }}/${{'{'}}{ vars.P6M_ARTIFACTORY_PROJECT }}-docker-local/applications
           push: true
           skip-setup: true
           builder-name: ${{'{'}}{ steps.buildx.outputs.name }}
           secrets: |
-            artifactory-token=${{'{'}}{ secrets.ARTIFACTORY_TOKEN }}
+            artifactory-token=${{'{'}}{ secrets.P6M_ARTIFACTORY_TOKEN }}
 
       - name: Publish to .NET Repository
         uses: p6m-actions/dotnet-repository-publish@v1
         with:
           repositories: |
-            ${{'{'}}{ vars.ARTIFACTORY_PROJECT }}-nuget
+            ${{'{'}}{ vars.P6M_ARTIFACTORY_PROJECT }}-nuget
         env:
-          NUGET_API_KEY: "${{'{'}}{ secrets.ARTIFACTORY_USERNAME }}:${{'{'}}{ secrets.ARTIFACTORY_IDENTITY_TOKEN }}"
+          NUGET_API_KEY: "${{'{'}}{ secrets.P6M_ARTIFACTORY_USERNAME }}:${{'{'}}{ secrets.P6M_ARTIFACTORY_IDENTITY_TOKEN }}"
 
       - name: Make Artifacts
         run: |
