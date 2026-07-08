@@ -1,10 +1,12 @@
 # Archetype integration tests
 
-Pytest harness that validates this archetype end to end: it renders the archetype
-headlessly with a known answers file, checks the generated project (expected files
-present, persistence-specific files present/absent per case, no unrendered
-`{{ placeholder }}` tokens left in paths or contents, generated YAML parses), and
-then builds the generated .NET solution and runs its unit tests.
+This archetype is tested by the shared
+[archetype-test-harness](https://github.com/p6m-archetypes/archetype-test-harness):
+it renders the archetype headlessly with the answers in [answers/](answers/), checks
+the generated project (expected files present, persistence-specific files
+present/absent per case, no unrendered `{{ placeholder }}` tokens, generated YAML
+parses), and builds the generated .NET solution and runs its unit tests. This
+directory holds only data - the test code lives in the harness repo.
 
 Two cases are covered: `postgresql` (the default persistence choice) and
 `persistence-none` (no Persistence project, no docker-compose stack).
@@ -19,50 +21,51 @@ Two cases are covered: `postgresql` (the default persistence choice) and
   ln -s /opt/homebrew/opt/archetect@2/bin/archetect /opt/homebrew/bin/archetect2
   ```
 
-  The harness looks for `$ARCHETECT2`, then `archetect2` on PATH, then the homebrew
-  keg, then `archetect` itself if it reports a 2.x version.
-- [uv](https://docs.astral.sh/uv/) on PATH (`brew install uv`) - installs Python and
-  test dependencies automatically on first run
+  The harness reads `requires.archetect` from [archetype.yaml](../archetype.yaml)
+  and looks for `$ARCHETECT2`, then `archetect2` on PATH, then the homebrew keg.
+- [uv](https://docs.astral.sh/uv/) on PATH (`brew install uv`)
 - Network access to GitHub - the archetype composes prompt/manifest components from
-  public `p6m-archetypes` and `archetect-common` git sources; archetect clones and
-  caches them on first render
+  git sources; archetect caches them after the first render
 - .NET SDK for the build tier (optional - build tests skip with a notice when
   `dotnet` is not on PATH). The generated project targets net8.0; the harness sets
-  `DOTNET_ROLL_FORWARD=Major` so a newer SDK works too.
+  `DOTNET_ROLL_FORWARD=Major` so newer SDKs work.
 
 ## Running
 
-All commands run from this `tests/` directory:
+From the repo root (or this directory):
 
 ```sh
-uv run pytest                  # everything: render, static checks, dotnet build + test
-uv run pytest -m "not build"   # fast tier only: render + static checks (no dotnet needed)
-uv run pytest -m build         # build tier only
-uv run pytest --offline        # don't hit the network; use archetect's cached components
-uv run pytest -v -ra           # verbose, with skip/fail reasons
+# in the flat org checkout, against the sibling harness:
+uvx --from ../archetype-test-harness archetype-test
+
+# anywhere, against the published harness:
+uvx --from git+https://github.com/p6m-archetypes/archetype-test-harness@dev archetype-test
 ```
 
-The first run clones the composed component repos and resolves Python dependencies,
-so it is slower; subsequent runs use archetect's and uv's caches.
+Extra arguments pass through to pytest:
+
+```sh
+archetype-test -m "not build"   # fast tier only: render + static checks, no dotnet needed
+archetype-test -k postgresql    # single case
+archetype-test --offline        # use archetect's cached component sources
+archetype-test -v -ra           # verbose, with skip/fail reasons
+```
 
 ## CI
 
-The same suite runs in GitHub Actions via
-[.github/workflows/test.yaml](../.github/workflows/test.yaml) on every pull request
-and push. The workflow installs archetect 2.x from its release binaries as
-`archetect2`. On failure it uploads the rendered project as a build artifact.
-
-## Inspecting rendered output
-
-Each test session renders into a pytest temp directory, e.g.
-`/tmp/pytest-of-<user>/pytest-<N>/render-postgresql0/`. Pytest keeps the last 3 runs,
-so after a failure you can open the generated project from the failing run directly.
+[.github/workflows/test.yaml](../.github/workflows/test.yaml) calls the harness's
+reusable workflow with `archetect-version: 2.1.2` (installed as `archetect2`) on
+every pull request, push, and manual dispatch. On failure it uploads the rendered
+project as a build artifact.
 
 ## Adding a test case
 
 Add an entry to [manifest.yaml](manifest.yaml) plus an answers file under
-[answers/](answers/) - no test code changes needed. Each case declares the answers
-file, the expected project directory name, files that must exist (and, optionally,
-must not exist), and the build steps to run inside the generated project. Prompt keys
-in answers files are kebab-case (`org-name`, `prefix-name`, ...) except `author_full`;
-anything omitted falls back to the prompt's default via `archetect render -D`.
+[answers/](answers/) - the schema is documented in the
+[harness README](https://github.com/p6m-archetypes/archetype-test-harness#manifestyaml-schema).
+
+## Inspecting rendered output
+
+Each run renders into a pytest temp directory, e.g.
+`/tmp/pytest-of-<user>/pytest-<N>/render-postgresql0/`. Pytest keeps the last 3
+runs, so after a failure you can open the generated project from the failing run.
