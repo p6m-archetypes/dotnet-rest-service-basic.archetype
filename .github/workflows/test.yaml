@@ -1,0 +1,63 @@
+name: Test Archetype
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # This archetype uses a Rhai script and requires archetect 2.x (3.x refuses .rhai)
+  ARCHETECT_VERSION: "2.1.2"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install archetect 2.x as archetect2
+        run: |
+          curl -fsSLO "https://github.com/archetect/archetect/releases/download/v${ARCHETECT_VERSION}/archetect-v${ARCHETECT_VERSION}-linux-x86_64.tar.gz"
+          curl -fsSLO "https://github.com/archetect/archetect/releases/download/v${ARCHETECT_VERSION}/archetect-v${ARCHETECT_VERSION}-linux-x86_64.tar.gz.sha256"
+          sha256sum -c "archetect-v${ARCHETECT_VERSION}-linux-x86_64.tar.gz.sha256"
+          mkdir -p extracted "$HOME/.local/bin"
+          tar -xzf "archetect-v${ARCHETECT_VERSION}-linux-x86_64.tar.gz" -C extracted --strip-components=1
+          mv extracted/archetect "$HOME/.local/bin/archetect2"
+          rm -rf extracted
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/archetect2" --version
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          # Keep in step with DOTNET_VERSION in archetype.rhai (net8.0 target)
+          dotnet-version: "8.0.x"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: tests/uv.lock
+
+      - name: Run tests
+        working-directory: tests
+        run: uv run pytest -v -ra
+
+      - name: Upload rendered project on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-project
+          path: /tmp/pytest-of-*/
+          if-no-files-found: ignore
+          retention-days: 5

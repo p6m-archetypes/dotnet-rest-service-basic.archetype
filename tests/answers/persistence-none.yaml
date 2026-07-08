@@ -1,0 +1,8 @@
+# Headless answers for the "persistence-none" test case: no database layer,
+# so no Persistence project and no docker-compose stack should be rendered.
+author_full: "Test Author <test@example.com>"
+org-name: "acme"
+solution-name: "widgets"
+prefix-name: "inventory"
+suffix-name: "service"
+persistence: "None"
