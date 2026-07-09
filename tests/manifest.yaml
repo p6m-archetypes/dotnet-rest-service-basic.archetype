@@ -1,0 +1,89 @@
+# Test cases for this archetype. Each case is rendered once per pytest session
+# and shared by all tests that reference it.
+#
+# Fields:
+#   name           unique case id (shows up in test names)
+#   answers        answers file passed to `archetect render -A`, relative to tests/
+#   project_dir    directory the render is expected to produce (derived from the answers)
+#   expected_files paths (relative to project_dir) that must exist after rendering
+#   absent_files   paths (relative to project_dir) that must NOT exist after rendering
+#   requires       executables that must be on PATH for the build tier; missing -> build tests skip
+#   build_steps    commands run sequentially inside project_dir by the build tier
+#   env            extra environment variables for build_steps
+#   yaml_globs     globs (relative to project_dir) of generated files that must parse
+#                  as valid YAML; each glob must match at least one file
+#
+# Note: `dotnet test` targets the UnitTests project only - the IntegrationTests
+# project needs a running database/Docker and is out of scope for this harness.
+cases:
+  - name: postgresql
+    answers: answers/postgresql.yaml
+    project_dir: inventory-service
+    expected_files:
+      - InventoryService.sln
+      - InventoryService.API/InventoryService.API.csproj
+      - InventoryService.Client/InventoryService.Client.csproj
+      - InventoryService.Core/InventoryService.Core.csproj
+      - InventoryService.Persistence/InventoryService.Persistence.csproj
+      - InventoryService.Persistence/Context/AppDbContext.cs
+      - InventoryService.Server/InventoryService.Server.csproj
+      - InventoryService.Server/InventoryServiceServer.cs
+      - InventoryService.Server/appsettings.json
+      - InventoryService.UnitTests/InventoryService.UnitTests.csproj
+      - InventoryService.IntegrationTests/InventoryService.IntegrationTests.csproj
+      - Dockerfile
+      - docker-compose.yml
+      - NuGet.config
+      - Directory.Build.props
+      - .github/workflows/build.yml
+      - .github/workflows/cut-tag.yml
+      - .github/workflows/promote.yml
+      - .platform/kubernetes/base/application.yaml
+      - .platform/kubernetes/base/kustomization.yaml
+      - .platform/kubernetes/dev/kustomization.yaml
+      - .platform/kubernetes/stg/kustomization.yaml
+      - .platform/kubernetes/prd/kustomization.yaml
+      - .gitignore
+      - .dockerignore
+    yaml_globs:
+      - ".platform/kubernetes/**/*.yaml"
+      - ".github/workflows/*.yml"
+      - "docker-compose.yml"
+    requires:
+      - dotnet
+    build_steps:
+      - [dotnet, build, --nologo]
+      - [dotnet, test, InventoryService.UnitTests, --nologo]
+    env:
+      # Let the generated net8.0 project build/test on machines with only a newer SDK.
+      DOTNET_ROLL_FORWARD: Major
+
+  - name: persistence-none
+    answers: answers/persistence-none.yaml
+    project_dir: inventory-service
+    expected_files:
+      - InventoryService.sln
+      - InventoryService.API/InventoryService.API.csproj
+      - InventoryService.Client/InventoryService.Client.csproj
+      - InventoryService.Core/InventoryService.Core.csproj
+      - InventoryService.Server/InventoryService.Server.csproj
+      - InventoryService.UnitTests/InventoryService.UnitTests.csproj
+      - InventoryService.IntegrationTests/InventoryService.IntegrationTests.csproj
+      - Dockerfile
+      - NuGet.config
+      - .github/workflows/build.yml
+      - .platform/kubernetes/base/application.yaml
+      - .gitignore
+    absent_files:
+      - InventoryService.Persistence
+      - docker-compose.yml
+    yaml_globs:
+      - ".platform/kubernetes/**/*.yaml"
+      - ".github/workflows/*.yml"
+    requires:
+      - dotnet
+    build_steps:
+      - [dotnet, build, --nologo]
+      - [dotnet, test, InventoryService.UnitTests, --nologo]
+    env:
+      DOTNET_ROLL_FORWARD: Major
