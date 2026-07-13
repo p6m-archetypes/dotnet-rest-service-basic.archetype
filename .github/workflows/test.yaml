@@ -57,10 +57,11 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      # librdkafka/openssl/sasl are needed because prova-core's default features pull in the
-      # kafka/db/s3 modules; the suite itself only uses fs/shell/http.
+      # prova-core's default features pull in the kafka/pulsar/grpc/db/s3 modules, so building it
+      # from source needs their native toolchains (librdkafka -> cmake/sasl, pulsar+grpc -> protoc,
+      # openssl) even though this suite only uses fs/shell. Drops out once prova ships a binary.
       - name: Install prova build dependencies
-        run: sudo apt-get update && sudo apt-get install -y cmake libssl-dev libsasl2-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y cmake protobuf-compiler libssl-dev libsasl2-dev pkg-config
 
       - name: Cache the prova binary
         id: prova-cache
