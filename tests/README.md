@@ -1,71 +1,72 @@
-# Archetype integration tests
+# Prova acceptance tests
 
-This archetype is tested by the shared
-[archetype-test-harness](https://github.com/p6m-archetypes/archetype-test-harness):
-it renders the archetype headlessly with the answers in [answers/](answers/), checks
-the generated project (expected files present, persistence-specific files
-present/absent per case, no unrendered `{{ placeholder }}` tokens, generated YAML
-parses), and builds the generated .NET solution and runs its unit tests. This
-directory holds only data - the test code lives in the harness repo.
+Black-box acceptance tests for this archetype, driven by [**prova**](https://github.com/prova-rs/prova)
+- a programmable, language-agnostic acceptance-test runner (Lua + a fixture model, single static
+binary). Each test **renders the archetype into a throwaway directory and asserts on the result**:
+the project layout, template substitution, conditional persistence wiring, and a real `dotnet build`.
 
-Two cases are covered: `postgresql` (the default persistence choice) and
-`persistence-none` (no Persistence project, no docker-compose stack).
+This suite replaces the previous pytest [archetype-test-harness](https://github.com/p6m-archetypes/archetype-test-harness)
+(`tests/manifest.yaml` + `answers/`) - the same render/layout/persistence/build checks, expressed as
+self-contained prova Lua rather than data driving an external Python package. It is the harness CI runs
+(see [`.github/workflows/test.yaml`](../.github/workflows/test.yaml)).
 
 ## Prerequisites
 
-- [archetect](https://archetect.github.io/) **2.x** - this archetype uses a Rhai
-  script, which archetect 3.x refuses to render. Install v2 alongside v3:
-
-  ```sh
-  brew install archetect/tap/archetect@2
-  ln -s /opt/homebrew/opt/archetect@2/bin/archetect /opt/homebrew/bin/archetect2
-  ```
-
-  The harness reads `requires.archetect` from [archetype.yaml](../archetype.yaml)
-  and looks for `$ARCHETECT2`, then `archetect2` on PATH, then the homebrew keg.
-- [uv](https://docs.astral.sh/uv/) on PATH (`brew install uv`)
-- Network access to GitHub - the archetype composes prompt/manifest components from
-  git sources; archetect caches them after the first render
-- .NET SDK for the build tier (optional - build tests skip with a notice when
-  `dotnet` is not on PATH). The generated project targets net8.0; the harness sets
-  `DOTNET_ROLL_FORWARD=Major` so newer SDKs work.
+| Tool         | Needed for                    | Notes |
+|--------------|-------------------------------|-------|
+| `prova`      | running the suite             | `brew tap prova-rs/tap && brew install prova` |
+| `archetect2` | rendering (Archetect **2.x**) | This is a Gen-1 **Rhai** archetype; prova's in-process `archetect.render` only handles Gen-2 Lua archetypes, so the tests shell out to `archetect2`. Install v2 alongside v3: `brew install archetect/tap/archetect@2 && ln -s /opt/homebrew/opt/archetect@2/bin/archetect /opt/homebrew/bin/archetect2`. Rendering tests are **skipped** (not failed) when `archetect2` is absent. |
+| `dotnet`     | the `build` test only         | SDK 8+. Restores from public nuget.org (no Artifactory credentials needed - the generated `NuGet.config` ships with the private source commented out). Skipped when `dotnet` is absent. |
+| network      | rendering + `dotnet restore`  | The archetype composes remote components (`org-prompts`, `project-prompts`, `manifests`, `gitignore`) that `archetect2` fetches over git and caches after the first render. |
 
 ## Running
 
-From the repo root (or this directory):
+Run **from the archetype repo root** (the render source defaults to the current directory):
 
 ```sh
-# in the flat org checkout, against the sibling harness:
-uvx --from ../archetype-test-harness archetype-test
+prova                    # whole suite, via ./prova.toml
+prova --profile smoke    # render + persistence only (skips the slow dotnet build)
+prova --profile ci       # JSON (JSONL) output for CI
 
-# anywhere, against the published harness:
-uvx --from git+https://github.com/p6m-archetypes/archetype-test-harness@main archetype-test
+prova acceptance/render_test.lua   # a single file
+prova --list                       # list tests without running
 ```
 
-Extra arguments pass through to pytest:
+If you must run from elsewhere, point the tests at the archetype: `ARCHETYPE_SRC=/path/to/repo prova …`.
 
-```sh
-archetype-test -m "not build"   # fast tier only: render + static checks, no dotnet needed
-archetype-test -k postgresql    # single case
-archetype-test --offline        # use archetect's cached component sources
-archetype-test -v -ra           # verbose, with skip/fail reasons
+## Layout
+
+```
+prova.toml            # suite manifest (at repo root): default / smoke / ci profiles
+acceptance/
+  helpers.lua         # shared render helper + suite-scoped render fixtures (conftest-style)
+  render_test.lua     # top-level layout, .NET modules, prefix/suffix + port substitution, no leftover {{markers}}
+  persistence_test.lua# None vs PostgreSQL: conditional Persistence module + docker-compose wiring
+  build_test.lua      # `dotnet build` of the generated solution (tag: build)
 ```
 
-## CI
+`helpers.lua` renders each persistence variant **once per run** (suite-scoped fixtures) and shares
+the rendered tree across every test file, so the whole suite pays for at most two renders. It has no
+`_test.lua` suffix, so the runner won't collect it as tests.
 
-[.github/workflows/test.yaml](../.github/workflows/test.yaml) calls the harness's
-reusable workflow with `archetect-version: 2.1.2` (installed as `archetect2`) on
-every pull request, push, and manual dispatch. On failure it uploads the rendered
-project as a build artifact.
+## How it works
 
-## Adding a test case
+prova's `archetect` plugin renders Gen-2 (Lua) archetypes in-process, but this archetype is Gen-1
+(Rhai). So `helpers.lua` writes a YAML answers file to a scratch dir and shells out to `archetect2`
+via `shell.run`, then the tests assert on the rendered filesystem with the `fs` module - which is
+exactly prova's black-box model: bring the system into existence, then poke it.
 
-Add an entry to [manifest.yaml](manifest.yaml) plus an answers file under
-[answers/](answers/) - the schema is documented in the
-[harness README](https://github.com/p6m-archetypes/archetype-test-harness#manifestyaml-schema).
+## Adding a test
 
-## Inspecting rendered output
+```lua
+local h = require("acceptance.helpers")
 
-Each run renders into a pytest temp directory, e.g.
-`/tmp/pytest-of-<user>/pytest-<N>/render-postgresql0/`. Pytest keeps the last 3
-runs, so after a failure you can open the generated project from the failing run.
+prova.test("my new check", { requires = h.NEEDS_ARCHETECT }, function(t)
+  local root = t:use(h.rendered_none)          -- or h.rendered_postgres
+  t:expect(fs.read(root .. "/README.md")):contains("something")
+end)
+```
+
+Gate every rendering test with `{ requires = h.NEEDS_ARCHETECT }` so it skips cleanly where
+`archetect2` is unavailable. Use `t:expect_all(...)` to report every failed file check at once
+rather than stopping at the first.

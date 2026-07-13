@@ -11,15 +11,70 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+env:
+  # archetect 2.x (this archetype uses a Rhai script; 3.x refuses .rhai). Installed as `archetect2`.
+  ARCHETECT_VERSION: "2.1.2"
+  # Keep in step with DOTNET_VERSION in archetype.rhai (net8.0 target).
+  DOTNET_VERSION: "8.0.x"
+  # prova has no published release/action yet, so we build it from source pinned to a commit.
+  # Bump this SHA to move prova forward; switch to a release binary or prova-rs/run-action once
+  # those exist.
+  PROVA_REV: "81e3991ba9db71ca9ef43781c8b5ca39b43835cd"
+
 jobs:
   test:
-    uses: p6m-workflows/archetype-test/.github/workflows/workflow.yml@v1
-    with:
-      harness-ref: main
-      # This archetype uses a Rhai script and requires archetect 2.x (3.x refuses .rhai);
-      # 2.x versions are installed as archetect2, which the harness resolves automatically
-      archetect-version: "2.1.2"
-      toolchain: dotnet
-      # Keep in step with DOTNET_VERSION in archetype.rhai (net8.0 target)
-      toolchain-version: "8.0.x"
-    secrets: inherit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install archetect 2.x (Rhai renderer)
+        env:
+          VERSION: ${{ env.ARCHETECT_VERSION }}
+        run: |
+          curl -fsSLO "https://github.com/archetect/archetect/releases/download/v${VERSION}/archetect-v${VERSION}-linux-x86_64.tar.gz"
+          curl -fsSLO "https://github.com/archetect/archetect/releases/download/v${VERSION}/archetect-v${VERSION}-linux-x86_64.tar.gz.sha256"
+          sha256sum -c "archetect-v${VERSION}-linux-x86_64.tar.gz.sha256"
+          mkdir -p extracted "$HOME/.local/bin"
+          tar -xzf "archetect-v${VERSION}-linux-x86_64.tar.gz" -C extracted --strip-components=1
+          mv extracted/archetect "$HOME/.local/bin/archetect2"
+          rm -rf extracted
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/archetect2" --version
+
+      # The archetype composes prompt/manifest components from git sources; rewrite git@github.com:
+      # (and internal p6m-archetypes https) to token-authenticated https so the runner can fetch them.
+      - name: Configure git access to library sources
+        env:
+          TOKEN: ${{ secrets.ARCHETYPE_LIBS_TOKEN || github.token }}
+        run: |
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/p6m-archetypes/".insteadOf "https://github.com/p6m-archetypes/"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # librdkafka/openssl/sasl are needed because prova-core's default features pull in the
+      # kafka/db/s3 modules; the suite itself only uses fs/shell/http.
+      - name: Install prova build dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake libssl-dev libsasl2-dev pkg-config
+
+      - name: Cache the prova binary
+        id: prova-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/prova
+          key: prova-${{ runner.os }}-${{ env.PROVA_REV }}
+
+      - name: Install prova
+        if: steps.prova-cache.outputs.cache-hit != 'true'
+        run: cargo install --git https://github.com/prova-rs/prova --rev "${PROVA_REV}" --locked prova-cli
+
+      - name: Ensure cargo bin on PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Run prova acceptance suite
+        run: prova --profile ci

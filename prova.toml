@@ -1,0 +1,15 @@
+# prova acceptance-test manifest. From the archetype repo root, just run `prova` (no args).
+# See tests/README.md for details.
+
+[run]                        # default profile
+paths  = ["tests"]           # discover tests/*_test.lua
+jobs   = 1                   # serial: suite-scoped renders are shared across files
+format = "console"
+
+# CI profile: machine-readable JSONL output. `prova --profile ci`
+[profiles.ci]
+format = "json"
+
+# Fast inner-loop subset: render + persistence checks, no dotnet build. `prova --profile smoke`
+[profiles.smoke]
+paths = ["tests/render_test.lua", "tests/persistence_test.lua"]
